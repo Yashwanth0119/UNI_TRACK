@@ -18,7 +18,7 @@ const STORAGE_KEY_STUDENTS = 'attendpulse_students_v6';
 const STORAGE_KEY_NOTIFS = 'attendpulse_notifs_v6';
 const STORAGE_KEY_STAFF_NOTIFS = 'attendpulse_staff_notifs_v6';
 const STORAGE_KEY_ROLE = 'attendpulse_role_v6';
-const STORAGE_KEY_AUTH = 'attendpulse_auth_v6';
+const STORAGE_KEY_AUTH = 'unitrack_auth_session';
 const STORAGE_KEY_CURR_STUDENT = 'attendpulse_curr_stu_v6';
 const STORAGE_KEY_CURR_TEACHER = 'attendpulse_curr_prof_v6';
 const STORAGE_KEY_SEL_CLASS = 'attendpulse_sel_class_v6';
@@ -29,8 +29,9 @@ export const AttendanceProvider = ({ children }) => {
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Default to false so user MUST log in with credentials
     const saved = localStorage.getItem(STORAGE_KEY_AUTH);
-    return saved !== null ? JSON.parse(saved) : true;
+    return saved === 'true';
   });
 
   const [activeStudentId, setActiveStudentId] = useState(() => {
@@ -432,6 +433,8 @@ export const AttendanceProvider = ({ children }) => {
 
   const logout = () => {
     setIsAuthenticated(false);
+    localStorage.removeItem(STORAGE_KEY_AUTH);
+    localStorage.removeItem('attendpulse_auth_v6');
     sounds.playBeep();
   };
 

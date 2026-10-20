@@ -14,8 +14,8 @@ export const Login = () => {
   const { login } = useAttendance();
 
   // Unified single login state
-  const [identifier, setIdentifier] = useState('koshin@university.edu');
-  const [password, setPassword] = useState('koshin123');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(true);

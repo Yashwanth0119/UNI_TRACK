@@ -1,5 +1,5 @@
--- ==============================================================================
--- AttendPulse - Supabase SQL Database Migration Schema
+-- AttendPulse -> UniTrack
+-- UniTrack - Supabase SQL Database Migration Schema
 -- Copy and run this script in your Supabase SQL Editor (https://app.supabase.com)
 -- ==============================================================================
 

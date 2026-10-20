@@ -31,7 +31,6 @@ export const AttendanceGauge = () => {
       <div className="section-header" style={{ marginBottom: 0 }}>
         <div>
           <h2 className="section-title">Attendance Status</h2>
-          <div className="section-subtitle">Semester aggregate tracking</div>
         </div>
         <span
           className={`status-pill ${isSafe ? 'present' : 'live'}`}

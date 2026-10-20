@@ -43,8 +43,16 @@ export const AttendanceProvider = ({ children }) => {
   });
 
   const [classes, setClasses] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_CLASSES);
-    return saved ? JSON.parse(saved) : INITIAL_CLASSES;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CLASSES);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return INITIAL_CLASSES;
   });
 
   const [selectedClassId, setSelectedClassId] = useState(() => {
@@ -119,20 +127,23 @@ export const AttendanceProvider = ({ children }) => {
         ]);
 
         if (clsRes.data && clsRes.data.length > 0) {
-          setClasses(
-            clsRes.data.map((c) => ({
-              ...c,
-              order: c.order_num ?? c.order,
-              isStudentDaily: c.is_student_daily ?? c.isStudentDaily,
-              studentPeriodOrder: c.student_period_order ?? c.studentPeriodOrder,
-              sessionDate: c.session_date ?? c.sessionDate,
-              totalEnrolled: c.total_enrolled ?? c.totalEnrolled,
-              creditHours: c.credit_hours ?? c.creditHours,
-              professorId: c.professor_id ?? c.professorId,
-              professorName: c.professor_name ?? c.professorName,
-              periodName: c.period_name ?? c.periodName,
-            }))
-          );
+          const mapped = clsRes.data.map((c) => ({
+            ...c,
+            order: c.order_num ?? c.order,
+            isStudentDaily: c.is_student_daily ?? c.isStudentDaily,
+            studentPeriodOrder: c.student_period_order ?? c.studentPeriodOrder,
+            sessionDate: c.session_date ?? c.sessionDate,
+            totalEnrolled: c.total_enrolled ?? c.totalEnrolled,
+            creditHours: c.credit_hours ?? c.creditHours,
+            professorId: c.professor_id ?? c.professorId,
+            professorName: c.professor_name ?? c.professorName,
+            periodName: c.period_name ?? c.periodName,
+          }));
+          const existingIds = new Set(mapped.map((c) => c.id));
+          const merged = [...mapped, ...INITIAL_CLASSES.filter((ic) => !existingIds.has(ic.id))];
+          setClasses(merged);
+        } else {
+          setClasses((prev) => (Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_CLASSES));
         }
 
         if (stuRes.data && stuRes.data.length > 0) {
@@ -304,14 +315,33 @@ export const AttendanceProvider = ({ children }) => {
   const activeLiveClass = classes.find((c) => c.status === 'live') || null;
 
   // Teacher portal data: all 4 classes for current teacher
-  const teacherClasses = classes
-    .filter((c) => c.professorId === currentProfessor.id || c.code === currentProfessor.subjectCode)
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  const effectiveClasses = Array.isArray(classes) && classes.length > 0 ? classes : INITIAL_CLASSES;
+  let teacherClasses = effectiveClasses
+    .filter((c) => {
+      const cProfId = (c.professorId || c.professor_id || '').toLowerCase();
+      const currProfId = (currentProfessor?.id || '').toLowerCase();
+      const cCode = (c.code || '').toLowerCase();
+      const currSubCode = (currentProfessor?.subjectCode || '').toLowerCase();
+      return (cProfId && cProfId === currProfId) || (cCode && cCode === currSubCode);
+    })
+    .sort((a, b) => (a.order || a.order_num || 0) - (b.order || b.order_num || 0));
+
+  if (teacherClasses.length === 0) {
+    teacherClasses = INITIAL_CLASSES
+      .filter((c) => c.professorId === currentProfessor?.id || c.code === currentProfessor?.subjectCode)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+  }
 
   // Student portal data: exactly 4 classes for student's daily schedule
-  const studentDailyClasses = classes
-    .filter((c) => c.isStudentDaily)
-    .sort((a, b) => (a.studentPeriodOrder || 0) - (b.studentPeriodOrder || 0));
+  let studentDailyClasses = effectiveClasses
+    .filter((c) => c.isStudentDaily || c.is_student_daily)
+    .sort((a, b) => (a.studentPeriodOrder || a.student_period_order || 0) - (b.studentPeriodOrder || b.student_period_order || 0));
+
+  if (studentDailyClasses.length === 0) {
+    studentDailyClasses = INITIAL_CLASSES
+      .filter((c) => c.isStudentDaily)
+      .sort((a, b) => (a.studentPeriodOrder || 0) - (b.studentPeriodOrder || 0));
+  }
 
   // Determine current active/selected teacher class
   // 1. If selectedClassId matches an unlocked/completed class for this teacher, use it
@@ -324,7 +354,9 @@ export const AttendanceProvider = ({ children }) => {
 
   // Students attendance list for current teacher's subject
   const teacherSubjectStudents = studentsList.map((stu) => {
-    const att = stu.attendance?.[currentProfessor.subjectCode] || { attended: 0, total: 30 };
+    const defaultAtt = STUDENTS.find((s) => s.id === stu.id)?.attendance?.[currentProfessor?.subjectCode] || { attended: 22, total: 30 };
+    const stuAtt = stu.attendance?.[currentProfessor?.subjectCode];
+    const att = (stuAtt && (stuAtt.attended !== undefined || stuAtt.total !== undefined)) ? stuAtt : defaultAtt;
     const pct = att.total > 0 ? ((att.attended / att.total) * 100).toFixed(1) : '0.0';
     const isBelow75 = parseFloat(pct) < 75;
     return {

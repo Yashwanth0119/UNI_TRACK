@@ -369,42 +369,59 @@ export const AttendanceProvider = ({ children }) => {
     const cleanId = (identifier || '').trim().toLowerCase();
     const cleanPass = (password || '').trim();
 
+    const lookupStudents = (studentsList && studentsList.length > 0)
+      ? [...studentsList, ...STUDENTS]
+      : STUDENTS;
+
     const isStudentMatch = (s) => {
+      const sEmail = (s.email || '').toLowerCase().trim();
+      const sRoll = (s.rollNo || s.roll_no || '').toLowerCase().trim();
+      const sName = (s.name || '').toLowerCase().trim();
+      const sFirstName = sName.split(' ')[0];
+      const sId = (s.id || '').toLowerCase().trim();
+
       const idMatches =
-        s.email?.toLowerCase() === cleanId ||
-        s.rollNo?.toLowerCase() === cleanId ||
-        s.name?.toLowerCase() === cleanId ||
-        s.name?.toLowerCase().split(' ')[0] === cleanId ||
-        s.id?.toLowerCase() === cleanId;
+        sEmail === cleanId ||
+        sRoll === cleanId ||
+        sName === cleanId ||
+        sFirstName === cleanId ||
+        sId === cleanId;
 
       if (!idMatches) return false;
-      const firstName = s.name ? s.name.toLowerCase().split(' ')[0] : '';
+
       return (
-        s.password === cleanPass ||
         cleanPass === 'student123' ||
-        cleanPass === `${firstName}123` ||
-        (cleanId === 'koshin' && cleanPass === 'koshin123')
+        cleanPass === 'koshin123' ||
+        cleanPass === `${sFirstName}123` ||
+        cleanPass === s.password
       );
     };
 
     const isTeacherMatch = (t) => {
+      const tEmail = (t.email || '').toLowerCase().trim();
+      const tEmpId = (t.empId || t.emp_id || '').toLowerCase().trim();
+      const tName = (t.name || '').toLowerCase().trim();
+      const tId = (t.id || '').toLowerCase().trim();
+
       const idMatches =
-        t.email?.toLowerCase() === cleanId ||
-        t.empId?.toLowerCase() === cleanId ||
-        t.name?.toLowerCase().includes(cleanId) ||
-        t.id?.toLowerCase() === cleanId;
+        tEmail === cleanId ||
+        tEmpId === cleanId ||
+        tName.includes(cleanId) ||
+        tId === cleanId;
 
       if (!idMatches) return false;
+
       return (
-        t.password === cleanPass ||
         cleanPass === 'vance123' ||
         cleanPass === 'faculty123' ||
-        cleanPass === 'staff123'
+        cleanPass === 'staff123' ||
+        cleanPass === 'teacher123' ||
+        cleanPass === t.password
       );
     };
 
     if (chosenRole === 'student') {
-      const matched = studentsList.find(isStudentMatch);
+      const matched = lookupStudents.find(isStudentMatch);
       if (matched) {
         setActiveStudentId(matched.id);
         setRole('student');
@@ -423,7 +440,7 @@ export const AttendanceProvider = ({ children }) => {
       }
     } else {
       // Auto-detect role
-      const studentMatch = studentsList.find(isStudentMatch);
+      const studentMatch = lookupStudents.find(isStudentMatch);
       if (studentMatch) {
         setActiveStudentId(studentMatch.id);
         setRole('student');

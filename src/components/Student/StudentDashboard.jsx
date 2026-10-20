@@ -1,0 +1,606 @@
+import React, { useState } from 'react';
+import { useAttendance } from '../../context/AttendanceContext';
+import { AttendanceGauge } from './AttendanceGauge';
+import { QrScannerModal } from './QrScannerModal';
+import {
+  QrCode,
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  CheckCircle2,
+  Radio,
+  History,
+  Lock,
+  Bell,
+  Check,
+} from 'lucide-react';
+
+export const StudentDashboard = () => {
+  const {
+    currentStudent,
+    classes,
+    studentDailyClasses,
+    activeLiveClass,
+    attendanceRecords,
+    studentNotifications,
+    markNotificationRead,
+  } = useAttendance();
+
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [selectedClassForScan, setSelectedClassForScan] = useState(null);
+  const [scheduleFilter, setScheduleFilter] = useState('daily'); // 'daily' | 'APP101' | 'DSA102' | 'OS103'
+
+  // 4 classes for the student for the day
+  const displayedClasses = React.useMemo(() => {
+    if (scheduleFilter === 'daily') {
+      return studentDailyClasses && studentDailyClasses.length > 0
+        ? studentDailyClasses
+        : classes.filter((c) => c.isStudentDaily).slice(0, 4);
+    }
+    return classes.filter((c) => c.code === scheduleFilter).slice(0, 4);
+  }, [scheduleFilter, studentDailyClasses, classes]);
+
+  // Check attendance status of student for a class
+  const getStudentClassStatus = (classId) => {
+    const record = attendanceRecords.find(
+      (r) => r.classId === classId && r.studentId === currentStudent.id
+    );
+    return record || null;
+  };
+
+  const handleOpenScannerForClass = (classId) => {
+    setSelectedClassForScan(classId);
+    setScannerOpen(true);
+  };
+
+  // Student's records for today
+  const studentTodayRecords = attendanceRecords.filter(
+    (r) => r.studentId === currentStudent.id
+  );
+
+  return (
+    <div className="student-dashboard animate-fade-in">
+      {/* Staff Shortage Notifications Alert Banner (Strictly Sent by Staff) */}
+      {studentNotifications.length > 0 && (
+        <div style={{ marginBottom: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {studentNotifications.map((notif) => (
+            <div
+              key={notif.id}
+              className="glass-panel"
+              style={{
+                padding: '1.1rem 1.35rem',
+                border: '1px solid #FECACA',
+                background: notif.isRead ? '#FEF2F2' : '#FEE2E2',
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: notif.isRead ? 'none' : '0 4px 14px rgba(220, 38, 38, 0.12)',
+                animation: 'popIn 0.3s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+                <div
+                  style={{
+                    padding: '0.5rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: '#FFFFFF',
+                    color: '#DC2626',
+                    border: '1px solid #FECACA',
+                    marginTop: '0.1rem',
+                  }}
+                >
+                  <Bell size={20} className={!notif.isRead ? 'pulse-badge' : ''} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.3rem' }}>
+                    <span
+                      style={{
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        padding: '0.15rem 0.55rem',
+                        borderRadius: 'var(--radius-full)',
+                        background: '#DC2626',
+                        color: '#FFFFFF',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      Official Notice from Faculty
+                    </span>
+                    <strong style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                      {notif.teacherName} ({notif.subjectCode} - {notif.subjectName})
+                    </strong>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                      • {notif.timestamp}
+                    </span>
+                  </div>
+
+                  <p style={{ color: '#991B1B', fontSize: '0.86rem', lineHeight: 1.45 }}>
+                    {notif.message}
+                  </p>
+                </div>
+              </div>
+
+              {!notif.isRead ? (
+                <button
+                  onClick={() => markNotificationRead(notif.id)}
+                  className="btn-secondary"
+                  style={{
+                    padding: '0.4rem 0.8rem',
+                    fontSize: '0.76rem',
+                    color: '#DC2626',
+                    borderColor: '#FECACA',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Check size={13} />
+                  Acknowledge
+                </button>
+              ) : (
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                  Acknowledged ✓
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Dashboard Top Banner */}
+      <div className="dashboard-hero">
+        <div className="hero-left">
+          <h1>
+            <span>Student Attendance Portal</span>
+            <span
+              style={{
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                color: 'var(--accent-emerald)',
+                background: 'rgba(16, 185, 129, 0.12)',
+                padding: '0.2rem 0.6rem',
+                borderRadius: 'var(--radius-full)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+              }}
+            >
+              Academic Year 2026-27
+            </span>
+          </h1>
+        </div>
+
+        {activeLiveClass && (
+          <div className="hero-actions">
+            <button
+              className="btn-primary"
+              onClick={() => handleOpenScannerForClass(activeLiveClass.id)}
+            >
+              <QrCode size={18} />
+              Scan for {activeLiveClass.code}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Main Grid: Left = Today's Classes & Log, Right = Percentage Gauge */}
+      <div className="student-grid">
+        {/* Left Column: Classes Schedule */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+          {/* Quick Scanner Action Hero (Active when lecture is in session) */}
+          {activeLiveClass && (
+            <div className="glass-panel scan-hero-card">
+              <div className="scan-hero-text">
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.78rem',
+                    color: '#38bdf8',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    marginBottom: '0.25rem',
+                  }}
+                >
+                  <Radio size={14} className="pulse-badge" />
+                  Lecture In Session: {activeLiveClass.code}
+                </div>
+                <h3>
+                  Active: {activeLiveClass.code} ({activeLiveClass.name})
+                </h3>
+                <p>
+                  Attendance is open for {activeLiveClass.code} in {activeLiveClass.room}. Note: Scanners for other classes are locked while this lecture is ongoing.
+                </p>
+              </div>
+
+              <button
+                className="btn-primary"
+                onClick={() => handleOpenScannerForClass(activeLiveClass.id)}
+                style={{ padding: '0.8rem 1.6rem', fontSize: '0.95rem' }}
+              >
+                <QrCode size={19} />
+                Scan for {activeLiveClass.code}
+              </button>
+            </div>
+          )}
+
+          {/* Today's Classes Section (4 Classes For Student) */}
+          <div>
+            <div className="section-header" style={{ marginBottom: '0.85rem' }}>
+              <div>
+                <h2 className="section-title">
+                  <Calendar size={20} style={{ color: 'var(--primary)' }} />
+                  Today's Classes Schedule
+                </h2>
+                <div className="section-subtitle">
+                  Daily academic timetable (4 Classes Per Day for Student)
+                </div>
+              </div>
+
+              <span
+                style={{
+                  fontSize: '0.82rem',
+                  color: 'var(--primary)',
+                  fontWeight: 700,
+                  background: '#EEF2FF',
+                  border: '1px solid #C7D2FE',
+                  padding: '0.25rem 0.7rem',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                {displayedClasses.length} Classes for Today
+              </span>
+            </div>
+
+            {/* Course / Timetable Filter Tabs (All Views Feature Exactly 4 Classes) */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.45rem',
+                flexWrap: 'wrap',
+                marginBottom: '1rem',
+              }}
+            >
+              {[
+                { key: 'daily', label: "📅 Today's 4-Period Schedule (4 Classes)" },
+                { key: 'APP101', label: '💻 APP101 (4 Classes • Dr. Vance)' },
+                { key: 'DSA102', label: '📊 DSA102 (4 Classes • Dr. Rostova)' },
+                { key: 'OS103', label: '⚙️ OS103 (4 Classes • Dr. Chen)' },
+              ].map((tab) => {
+                const isActive = scheduleFilter === tab.key;
+                const hasLiveClass = tab.key === 'daily'
+                  ? displayedClasses.some((c) => c.status === 'live')
+                  : activeLiveClass?.code === tab.key;
+
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setScheduleFilter(tab.key)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.4rem 0.8rem',
+                      borderRadius: 'var(--radius-full)',
+                      fontSize: '0.78rem',
+                      fontWeight: isActive ? 700 : 500,
+                      background: isActive ? 'var(--primary)' : '#FFFFFF',
+                      color: isActive ? '#FFFFFF' : 'var(--text-main)',
+                      border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
+                      boxShadow: isActive ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>{tab.label}</span>
+                    {hasLiveClass && (
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: '#10B981',
+                          boxShadow: '0 0 6px #10B981',
+                        }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* If there's an active live class in another course tab, highlight it */}
+            {activeLiveClass && !displayedClasses.some((c) => c.id === activeLiveClass.id) && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.75rem 1rem',
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  borderRadius: 'var(--radius-md)',
+                  marginBottom: '1rem',
+                  gap: '0.75rem',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#047857', fontWeight: 600 }}>
+                  <Radio size={16} className="pulse-badge" />
+                  <span>
+                    Faculty has opened attendance for <strong>{activeLiveClass.code}</strong> ({activeLiveClass.name})
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.45rem' }}>
+                  <button
+                    onClick={() => setScheduleFilter(activeLiveClass.code)}
+                    className="btn-secondary"
+                    style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                  >
+                    Switch to {activeLiveClass.code}
+                  </button>
+                  <button
+                    onClick={() => handleOpenScannerForClass(activeLiveClass.id)}
+                    className="btn-primary"
+                    style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem' }}
+                  >
+                    <QrCode size={14} /> Scan Now
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Class Cards List (4 Classes) */}
+            <div className="class-list">
+              {displayedClasses.map((cls, idx) => {
+                const attendedRecord = getStudentClassStatus(cls.id);
+                const isLive = cls.status === 'live';
+
+                return (
+                  <div
+                    key={cls.id}
+                    className={`glass-panel class-card glow-hover ${
+                      isLive ? 'is-live' : ''
+                    }`}
+                    style={{ '--class-color': cls.color }}
+                  >
+                    <div className="class-main-info">
+                      <div className="class-meta-header">
+                        <span className="class-code-badge">{cls.code}</span>
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            padding: '0.15rem 0.55rem',
+                            borderRadius: 'var(--radius-sm)',
+                            background: '#EEF2FF',
+                            color: '#4F46E5',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.02em',
+                          }}
+                        >
+                          {cls.periodName || `Class ${idx + 1}`}
+                        </span>
+                        {isLive && (
+                          <span className="status-pill live pulse-badge">
+                            <Radio size={12} />
+                            Class In Session (Attendance Open)
+                          </span>
+                        )}
+                        {cls.status === 'completed' && (
+                          <span className="status-pill present">
+                            <Check size={12} />
+                            Session Completed
+                          </span>
+                        )}
+                        {cls.status === 'locked' && (
+                          <span
+                            className="status-pill not-marked"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                            }}
+                          >
+                            <Lock size={11} />
+                            Locked (Session {cls.order})
+                          </span>
+                        )}
+                        {cls.status === 'ready' && !isLive && (
+                          <span
+                            className="status-pill upcoming"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                            }}
+                          >
+                            <Clock size={11} />
+                            Scheduled
+                          </span>
+                        )}
+                        {attendedRecord && (
+                          <span className="status-pill present">
+                            <CheckCircle2 size={12} />
+                            Present ({attendedRecord.timestamp})
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="class-title">{cls.name}</h3>
+
+                      <div className="class-details-row">
+                        <div
+                          className="detail-item"
+                          style={{
+                            background: '#EEF2FF',
+                            padding: '0.2rem 0.55rem',
+                            borderRadius: '4px',
+                            border: '1px solid #C7D2FE',
+                            color: '#4F46E5',
+                            fontWeight: 700,
+                          }}
+                        >
+                          <Clock size={13} style={{ color: '#4F46E5' }} />
+                          <span>{cls.time}</span>
+                        </div>
+                        <div className="detail-item">
+                          <MapPin size={14} style={{ color: 'var(--accent-amber)' }} />
+                          <span>{cls.room}</span>
+                        </div>
+                        <div className="detail-item">
+                          <User size={14} style={{ color: 'var(--accent-violet)' }} />
+                          <span>{cls.professorName}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action button */}
+                    <div>
+                      {attendedRecord ? (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            color: 'var(--accent-emerald)',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            padding: '0.5rem 0.85rem',
+                            background: 'rgba(16, 185, 129, 0.1)',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                          }}
+                        >
+                          <CheckCircle2 size={16} />
+                          Recorded
+                        </div>
+                      ) : isLive ? (
+                        <button
+                          className="btn-primary"
+                          onClick={() => handleOpenScannerForClass(cls.id)}
+                          style={{ whiteSpace: 'nowrap' }}
+                        >
+                          <QrCode size={16} />
+                          Scan Now
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="btn-secondary"
+                          style={{
+                            whiteSpace: 'nowrap',
+                            opacity: 0.45,
+                            cursor: 'not-allowed',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                          }}
+                          title={`Scanner inactive for ${cls.code}. You can only scan when this class is in session.`}
+                        >
+                          <Lock size={14} />
+                          Scanner Inactive
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Today's Activity Log */}
+          <div className="glass-panel" style={{ padding: '1.5rem' }}>
+            <div className="section-header" style={{ marginBottom: '1rem' }}>
+              <h3 className="section-title" style={{ fontSize: '1.05rem' }}>
+                <History size={18} style={{ color: 'var(--accent-cyan)' }} />
+                Today's Attendance Activity Log
+              </h3>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                Real-time records
+              </span>
+            </div>
+
+            {studentTodayRecords.length === 0 ? (
+              <div
+                style={{
+                  textAlign: 'center',
+                  padding: '1.75rem 1rem',
+                  color: 'var(--text-muted)',
+                  fontSize: '0.88rem',
+                }}
+              >
+                No attendance recorded yet today. Scan a QR code when your class starts!
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {studentTodayRecords.map((rec) => (
+                  <div
+                    key={rec.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem 1rem',
+                      background: '#F9FAFB',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-subtle)',
+                      fontSize: '0.84rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '50%',
+                          background: '#ECFDF5',
+                          color: '#059669',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <CheckCircle2 size={16} />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>
+                          {rec.className} ({rec.classCode})
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                          Verified via {rec.method === 'QR_SCAN' ? 'Camera QR Scan' : 'Faculty Override'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 600, color: '#059669' }}>
+                        {rec.timestamp}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                        Status: PRESENT
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Attendance Statistics & Percentage */}
+        <div>
+          <AttendanceGauge />
+        </div>
+      </div>
+
+      {/* QR Code Camera Scanner Modal */}
+      <QrScannerModal
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        preselectedClassId={selectedClassForScan}
+      />
+    </div>
+  );
+};

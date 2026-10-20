@@ -11,7 +11,7 @@ import {
 import { BrandLogo } from '../Common/BrandLogo';
 
 export const Login = () => {
-  const { login } = useAttendance();
+  const { login, isSupabaseConfigured } = useAttendance();
 
   // Unified single login state
   const [identifier, setIdentifier] = useState('');
@@ -59,6 +59,34 @@ export const Login = () => {
           <span style={{ color: 'var(--text-main)' }}>Uni</span>
           <span style={{ color: 'var(--primary)' }}>Track</span>
         </h1>
+        {isSupabaseConfigured && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.2rem 0.65rem',
+              borderRadius: '999px',
+              background: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: '#059669',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              marginTop: '0.75rem',
+            }}
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                backgroundColor: '#10B981',
+                boxShadow: '0 0 6px #10B981',
+              }}
+            />
+            <span>Supabase Live</span>
+          </div>
+        )}
       </div>
 
       {/* Main Single Card Layout */}

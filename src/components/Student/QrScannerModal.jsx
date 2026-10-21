@@ -25,6 +25,7 @@ export const QrScannerModal = ({ isOpen, onClose }) => {
 
   const html5QrCodeRef = useRef(null);
   const isStoppingRef = useRef(false);
+  const isScanningLockedRef = useRef(false);
 
   const stopScanner = useCallback(async () => {
     if (html5QrCodeRef.current && !isStoppingRef.current) {
@@ -44,12 +45,15 @@ export const QrScannerModal = ({ isOpen, onClose }) => {
   }, []);
 
   const handleScanSuccess = useCallback((text) => {
+    if (isScanningLockedRef.current) return;
+    isScanningLockedRef.current = true;
+
     const result = markAttendanceFromScan(text);
-    if (result.success) {
+    if (result && result.success) {
       stopScanner();
       setScanStatus({
         type: 'success',
-        message: result.message,
+        message: result.message || 'Attendance verified & marked successfully!',
         classInfo: result.classInfo,
         record: result.record,
         prevSubPct: result.prevSubPct,
@@ -59,23 +63,23 @@ export const QrScannerModal = ({ isOpen, onClose }) => {
         studentName: result.studentName,
         rollNo: result.rollNo,
       });
-      // Automatically close modal after 4.5 seconds on success (or user can click Done immediately)
-      setTimeout(() => {
-        onClose();
-      }, 4500);
     } else {
       setScanStatus({
         type: 'error',
-        message: result.error,
-        classInfo: result.classInfo,
+        message: result?.error || 'Could not verify attendance. Please try scanning again.',
+        classInfo: result?.classInfo,
       });
+      setTimeout(() => {
+        isScanningLockedRef.current = false;
+      }, 2500);
     }
-  }, [markAttendanceFromScan, onClose, stopScanner]);
+  }, [markAttendanceFromScan, stopScanner]);
 
   // Initialize camera scanner when modal opens
   useEffect(() => {
     if (!isOpen) return;
 
+    isScanningLockedRef.current = false;
     setScanStatus({ type: null, message: '', classInfo: null });
     setCameraError(null);
 

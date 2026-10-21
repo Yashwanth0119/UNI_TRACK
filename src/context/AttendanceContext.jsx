@@ -60,8 +60,20 @@ export const AttendanceProvider = ({ children }) => {
   });
 
   const [studentsList, setStudentsList] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_STUDENTS);
-    return saved ? JSON.parse(saved) : STUDENTS;
+    const ALLOWED_NAMES = ['koshin', 'abijith vasudev', 'enoch john', 'thirush', 'naresh'];
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_STUDENTS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const filtered = parsed.filter((s) =>
+            ALLOWED_NAMES.some((n) => (s.name || '').toLowerCase().includes(n))
+          );
+          if (filtered.length === STUDENTS.length) return filtered;
+        }
+      }
+    } catch (e) {}
+    return STUDENTS;
   });
 
   const [attendanceRecords, setAttendanceRecords] = useState(() => {
@@ -147,12 +159,27 @@ export const AttendanceProvider = ({ children }) => {
         }
 
         if (stuRes.data && stuRes.data.length > 0) {
-          setStudentsList(
-            stuRes.data.map((s) => ({
-              ...s,
-              rollNo: s.roll_no ?? s.rollNo,
-            }))
-          );
+          const ALLOWED_NAMES = ['koshin', 'abijith vasudev', 'enoch john', 'thirush', 'naresh'];
+          const filtered = stuRes.data
+            .filter((s) => ALLOWED_NAMES.some((n) => (s.name || '').toLowerCase().includes(n)))
+            .map((s) => {
+              const defaultStu = STUDENTS.find(
+                (d) => d.rollNo === (s.roll_no ?? s.rollNo) || d.id === s.id
+              );
+              return {
+                ...s,
+                rollNo: s.roll_no ?? s.rollNo,
+                attendance:
+                  s.attendance && s.attendance.APP101
+                    ? s.attendance
+                    : defaultStu
+                    ? defaultStu.attendance
+                    : s.attendance,
+              };
+            });
+          if (filtered.length > 0) {
+            setStudentsList(filtered);
+          }
         }
 
         if (recRes.data && recRes.data.length > 0) {
@@ -234,7 +261,44 @@ export const AttendanceProvider = ({ children }) => {
 
     syncWithSupabase();
 
+    // 3-second background polling ensures multi-device instant sync even if WebSockets are slow
+    const pollTimer = setInterval(async () => {
+      try {
+        const { data: latest } = await supabase
+          .from('attendance_records')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(30);
+
+        if (latest && latest.length > 0) {
+          const mapped = latest.map((r) => ({
+            id: r.id,
+            classId: r.class_id ?? r.classId,
+            classCode: r.class_code ?? r.classCode,
+            className: r.class_name ?? r.className,
+            studentId: r.student_id ?? r.studentId,
+            studentName: r.student_name ?? r.studentName,
+            rollNo: r.roll_no ?? r.rollNo,
+            timestamp: r.timestamp,
+            date: r.date,
+            status: r.status,
+            method: r.method,
+          }));
+
+          setAttendanceRecords((prev) => {
+            const existingIds = new Set(prev.map((x) => x.id));
+            const newOnes = mapped.filter((x) => !existingIds.has(x.id));
+            if (newOnes.length > 0) {
+              return [...newOnes, ...prev];
+            }
+            return prev;
+          });
+        }
+      } catch (e) {}
+    }, 3000);
+
     return () => {
+      clearInterval(pollTimer);
       if (realtimeSubscription) {
         supabase.removeChannel(realtimeSubscription);
       }
@@ -285,7 +349,14 @@ export const AttendanceProvider = ({ children }) => {
   }, [selectedClassId]);
 
   // Current logged in student & teacher objects
-  const currentStudent = studentsList.find((s) => s.id === activeStudentId) || studentsList[0];
+  const currentStudent =
+    studentsList.find(
+      (s) =>
+        s.id === activeStudentId ||
+        s.rollNo === activeStudentId ||
+        (s.id === 's1' && activeStudentId === 'STU-001') ||
+        (s.id === 'STU-001' && activeStudentId === 's1')
+    ) || studentsList[0];
   const currentProfessor = TEACHERS.find((t) => t.id === activeTeacherId) || TEACHERS[0];
 
   // Distinct 3 subjects for student aggregate statistics
@@ -698,36 +769,45 @@ export const AttendanceProvider = ({ children }) => {
         };
       }
 
-      // Check if class is LIVE
+      // If class is not yet marked live in this client, scanning the professor's QR code activates it
       if (cls.status !== 'live') {
-        sounds.playError();
-        const currentlyLive = classes.find((c) => c.status === 'live');
-        const guidance = currentlyLive
-          ? ` Only ${currentlyLive.code} (${currentlyLive.name}) is currently in session.`
-          : ' No lecture is currently in session.';
-        return {
-          success: false,
-          isInactiveClass: true,
-          error: `Scanner Inactive for ${cls.code}: This lecture is not currently going on.${guidance}`,
-          classInfo: cls,
-        };
+        setClasses((prev) =>
+          prev.map((c) => (c.id === cls.id ? { ...c, status: 'live' } : c))
+        );
       }
 
       // Check if student already marked today for this session
       const alreadyMarked = attendanceRecords.some(
-        (rec) => rec.classId === cls.id && rec.studentId === currentStudent.id
+        (rec) =>
+          (rec.classId === cls.id || rec.classCode === cls.code) &&
+          (rec.studentId === currentStudent.id || rec.rollNo === currentStudent.rollNo)
       );
 
       if (alreadyMarked) {
-        sounds.playBeep();
+        sounds.playSuccess();
         const existingRec = attendanceRecords.find(
-          (rec) => rec.classId === cls.id && rec.studentId === currentStudent.id
+          (rec) =>
+            (rec.classId === cls.id || rec.classCode === cls.code) &&
+            (rec.studentId === currentStudent.id || rec.rollNo === currentStudent.rollNo)
         );
+        const currentAtt = currentStudent.attendance?.[cls.code] || { attended: 0, total: 30 };
+        const currentSubPct = currentAtt.total > 0 ? ((currentAtt.attended / currentAtt.total) * 100).toFixed(1) : '0.0';
         return {
-          success: false,
+          success: true,
           alreadyMarked: true,
-          error: `Attendance already recorded for ${cls.name} today at ${existingRec?.timestamp || 'earlier today'}.`,
+          message: `Attendance is verified and marked for ${cls.name}! Status: PRESENT ✓`,
+          record: existingRec || {
+            timestamp: 'Verified today',
+            status: 'present',
+            method: 'QR_SCAN',
+          },
           classInfo: cls,
+          prevSubPct: currentSubPct,
+          newSubPct: currentSubPct,
+          prevOverallPct: overallPercentage,
+          newOverallPct: overallPercentage,
+          studentName: currentStudent.name,
+          rollNo: currentStudent.rollNo,
         };
       }
 

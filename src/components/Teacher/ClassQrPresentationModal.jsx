@@ -80,8 +80,14 @@ export const ClassQrPresentationModal = ({ isOpen, onClose, classId }) => {
   const qrPayload = getQrPayload(selectedClass.id) || selectedClass.code;
 
   // Present records for this class
-  const classRecords = attendanceRecords.filter((r) => r.classId === selectedClass.id);
-  const presentStudentIds = new Set(classRecords.map((r) => r.studentId));
+  const classRecords = attendanceRecords.filter(
+    (r) =>
+      r.classId === selectedClass.id ||
+      (selectedClass && r.classCode === selectedClass.code)
+  );
+  const presentStudentIds = new Set(
+    classRecords.flatMap((r) => [r.studentId, r.rollNo].filter(Boolean))
+  );
 
   // Filter students
   const filteredStudents = safeStudents.filter(
@@ -363,8 +369,8 @@ export const ClassQrPresentationModal = ({ isOpen, onClose, classId }) => {
                   </thead>
                   <tbody>
                     {filteredStudents.map((stu) => {
-                      const isPresent = presentStudentIds.has(stu.id);
-                      const rec = classRecords.find((r) => r.studentId === stu.id);
+                      const isPresent = presentStudentIds.has(stu.id) || presentStudentIds.has(stu.rollNo);
+                      const rec = classRecords.find((r) => r.studentId === stu.id || r.rollNo === stu.rollNo);
 
                       return (
                         <tr

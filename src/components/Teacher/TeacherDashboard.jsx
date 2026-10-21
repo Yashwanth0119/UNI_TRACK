@@ -117,7 +117,12 @@ export const TeacherDashboard = () => {
   };
 
   // Present records for active class today
-  const classRecordsToday = attendanceRecords.filter((r) => r.classId === activeClass?.id);
+  const classRecordsToday = attendanceRecords.filter(
+    (r) =>
+      r.classId === activeClass?.id ||
+      (activeClass && r.classCode === activeClass.code) ||
+      (activeClass && r.classCode === currentProfessor.subjectCode)
+  );
 
   // Filter students
   const filteredStudents = teacherSubjectStudents.filter((stu) => {
@@ -915,7 +920,7 @@ export const TeacherDashboard = () => {
                     {/* Active Session Scan Status */}
                     <td>
                       {(() => {
-                        const rec = classRecordsToday.find((r) => r.studentId === stu.id);
+                        const rec = classRecordsToday.find((r) => r.studentId === stu.id || r.rollNo === stu.rollNo);
                         if (rec) {
                           return (
                             <span

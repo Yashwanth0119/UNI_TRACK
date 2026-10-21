@@ -14,6 +14,8 @@ import {
   Lock,
   Bell,
   Check,
+  TrendingUp,
+  Percent,
 } from 'lucide-react';
 
 export const StudentDashboard = () => {
@@ -25,6 +27,9 @@ export const StudentDashboard = () => {
     attendanceRecords,
     studentNotifications,
     markNotificationRead,
+    overallPercentage,
+    totalAttended,
+    totalClassesCount,
   } = useAttendance();
 
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -180,6 +185,110 @@ export const StudentDashboard = () => {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Attendance Overview Strip */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+          gap: '1rem',
+          marginBottom: '1.75rem',
+        }}
+      >
+        <div
+          className="glass-panel"
+          style={{
+            padding: '1.1rem 1.25rem',
+            background: parseFloat(overallPercentage) >= 75 ? '#F0FDF4' : '#FEF2F2',
+            border: parseFloat(overallPercentage) >= 75 ? '1px solid #BBF7D0' : '1px solid #FECACA',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              Overall Attendance
+            </div>
+            <div
+              style={{
+                fontSize: '1.85rem',
+                fontWeight: 800,
+                color: parseFloat(overallPercentage) >= 75 ? '#059669' : '#DC2626',
+                fontFamily: 'var(--font-heading)',
+                marginTop: '0.15rem',
+              }}
+            >
+              {overallPercentage}%
+            </div>
+            <div style={{ fontSize: '0.72rem', color: parseFloat(overallPercentage) >= 75 ? '#047857' : '#B91C1C', fontWeight: 600, marginTop: '0.15rem' }}>
+              {parseFloat(overallPercentage) >= 75 ? '✓ Eligible for Exams (≥75%)' : '⚠ Attendance Shortage (<75%)'}
+            </div>
+          </div>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              background: parseFloat(overallPercentage) >= 75 ? '#DCFCE7' : '#FEE2E2',
+              color: parseFloat(overallPercentage) >= 75 ? '#059669' : '#DC2626',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <TrendingUp size={22} />
+          </div>
+        </div>
+
+        <div className="glass-panel" style={{ padding: '1.1rem 1.25rem' }}>
+          <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+            Total Classes Attended
+          </div>
+          <div
+            style={{
+              fontSize: '1.85rem',
+              fontWeight: 800,
+              color: 'var(--primary)',
+              fontFamily: 'var(--font-heading)',
+              marginTop: '0.15rem',
+            }}
+          >
+            {totalAttended}{' '}
+            <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+              / {totalClassesCount}
+            </span>
+          </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '0.15rem' }}>
+            Increases with every verified QR scan
+          </div>
+        </div>
+
+        <div className="glass-panel" style={{ padding: '1.1rem 1.25rem' }}>
+          <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+            Today's Attendance Status
+          </div>
+          <div
+            style={{
+              fontSize: '1.85rem',
+              fontWeight: 800,
+              color: '#059669',
+              fontFamily: 'var(--font-heading)',
+              marginTop: '0.15rem',
+            }}
+          >
+            {studentTodayRecords.length}{' '}
+            <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+              / {displayedClasses.length} Marked
+            </span>
+          </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '0.15rem' }}>
+            {studentTodayRecords.length === displayedClasses.length
+              ? '✓ All daily classes attended'
+              : 'Scan when lecture commences'}
+          </div>
+        </div>
       </div>
 
       {/* Main Grid: Left = Today's Classes & Log, Right = Percentage Gauge */}
@@ -454,6 +563,72 @@ export const StudentDashboard = () => {
                           <span>{cls.professorName}</span>
                         </div>
                       </div>
+
+                      {/* Subject Attendance Percentage Badge */}
+                      {(() => {
+                        const stuAtt = currentStudent.attendance?.[cls.code] || { attended: 0, total: 30 };
+                        const subPct = stuAtt.total > 0 ? ((stuAtt.attended / stuAtt.total) * 100).toFixed(1) : '0.0';
+                        const isSubSafe = parseFloat(subPct) >= 75;
+
+                        return (
+                          <div
+                            style={{
+                              marginTop: '0.75rem',
+                              padding: '0.55rem 0.75rem',
+                              background: isSubSafe ? '#F0FDF4' : '#FEF2F2',
+                              border: isSubSafe ? '1px solid #BBF7D0' : '1px solid #FECACA',
+                              borderRadius: 'var(--radius-sm)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '0.65rem',
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem' }}>
+                              <Percent size={13} style={{ color: isSubSafe ? '#059669' : '#DC2626' }} />
+                              <span style={{ color: 'var(--text-muted)' }}>{cls.code} Attendance:</span>
+                              <strong style={{ color: isSubSafe ? '#059669' : '#DC2626', fontSize: '0.84rem' }}>
+                                {subPct}%
+                              </strong>
+                              <span style={{ color: 'var(--text-dim)', fontSize: '0.74rem' }}>
+                                ({stuAtt.attended}/{stuAtt.total} classes attended)
+                              </span>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <div
+                                style={{
+                                  width: '55px',
+                                  height: '5px',
+                                  background: '#E5E7EB',
+                                  borderRadius: '3px',
+                                  overflow: 'hidden',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: `${Math.min(100, Math.max(5, subPct))}%`,
+                                    height: '100%',
+                                    background: isSubSafe ? 'linear-gradient(90deg, #10B981, #059669)' : '#DC2626',
+                                    borderRadius: '3px',
+                                  }}
+                                />
+                              </div>
+                              <span
+                                style={{
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  color: isSubSafe ? '#059669' : '#DC2626',
+                                  textTransform: 'uppercase',
+                                }}
+                              >
+                                {isSubSafe ? 'Eligible' : 'Shortage'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Action button */}
@@ -462,19 +637,32 @@ export const StudentDashboard = () => {
                         <div
                           style={{
                             display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                            color: 'var(--accent-emerald)',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                            padding: '0.5rem 0.85rem',
-                            background: 'rgba(16, 185, 129, 0.1)',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                            flexDirection: 'column',
+                            alignItems: 'flex-end',
+                            gap: '0.25rem',
                           }}
                         >
-                          <CheckCircle2 size={16} />
-                          Recorded
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.4rem',
+                              color: '#059669',
+                              fontSize: '0.82rem',
+                              fontWeight: 700,
+                              padding: '0.45rem 0.85rem',
+                              background: '#ECFDF5',
+                              borderRadius: 'var(--radius-md)',
+                              border: '1px solid #A7F3D0',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <CheckCircle2 size={15} />
+                            Attendance Marked
+                          </div>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                            Verified at {attendedRecord.timestamp}
+                          </span>
                         </div>
                       ) : isLive ? (
                         <button

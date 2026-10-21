@@ -547,6 +547,167 @@ export const TeacherDashboard = () => {
               </div>
             </div>
           </div>
+
+          {/* Live Scanned Students Section (Who Scanned & Marked Attendance) */}
+          <div
+            style={{
+              marginTop: '1.75rem',
+              borderTop: '1px solid var(--border-subtle)',
+              paddingTop: '1.5rem',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '1rem',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    fontSize: '1.05rem',
+                    fontWeight: 700,
+                    color: 'var(--text-main)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <CheckCircle2 size={18} style={{ color: '#059669' }} />
+                  Live Attendees Who Scanned & Marked Attendance
+                </h3>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Real-time verification feed of students who scanned the QR code for <strong>{activeClass.name} ({activeClass.code})</strong>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    padding: '0.25rem 0.65rem',
+                    borderRadius: 'var(--radius-full)',
+                    background: classRecordsToday.length > 0 ? '#ECFDF5' : '#F3F4F6',
+                    color: classRecordsToday.length > 0 ? '#059669' : '#6B7280',
+                    border: classRecordsToday.length > 0 ? '1px solid #A7F3D0' : '1px solid #E5E7EB',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                  }}
+                >
+                  <Radio size={12} className={isClassLive ? 'pulse-badge' : ''} />
+                  {classRecordsToday.length} of {teacherSubjectStudents.length} Students Scanned
+                </span>
+              </div>
+            </div>
+
+            {classRecordsToday.length === 0 ? (
+              <div
+                style={{
+                  padding: '2rem 1.5rem',
+                  textAlign: 'center',
+                  background: '#F9FAFB',
+                  border: '1px dashed var(--border-light)',
+                  borderRadius: 'var(--radius-lg)',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                <Users size={32} style={{ color: '#9CA3AF', margin: '0 auto 0.5rem', opacity: 0.7 }} />
+                <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.25rem' }}>
+                  Awaiting Student Scans...
+                </div>
+                <div style={{ fontSize: '0.8rem', maxWidth: '440px', margin: '0 auto' }}>
+                  {isClassLive
+                    ? 'The QR code is active! When students in the classroom scan the QR code with their camera, their names, roll numbers, and scan timestamps will appear here immediately.'
+                    : 'Click "Activate Class QR Code" above to project the QR code and begin taking attendance.'}
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                  gap: '0.85rem',
+                }}
+              >
+                {classRecordsToday.map((rec) => (
+                  <div
+                    key={rec.id}
+                    style={{
+                      padding: '0.85rem 1rem',
+                      background: '#FFFFFF',
+                      border: '1px solid #A7F3D0',
+                      borderRadius: 'var(--radius-md)',
+                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem',
+                      animation: 'popIn 0.3s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: '50%',
+                          background: '#ECFDF5',
+                          color: '#059669',
+                          border: '1px solid #A7F3D0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '0.88rem',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {rec.studentName?.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-main)' }}>
+                          {rec.studentName}
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                          Roll: <strong style={{ color: 'var(--text-main)' }}>{rec.rollNo}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: 'var(--radius-full)',
+                          background: '#ECFDF5',
+                          color: '#059669',
+                          marginBottom: '0.2rem',
+                        }}
+                      >
+                        <CheckCircle2 size={11} />
+                        Scanned
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Clock size={11} />
+                        {rec.timestamp}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -696,6 +857,7 @@ export const TeacherDashboard = () => {
               <tr>
                 <th>Roll No</th>
                 <th>Student Name</th>
+                <th>Active Session Scan Status</th>
                 <th>Subject Classes</th>
                 <th>Attendance %</th>
                 <th>Threshold Status</th>
@@ -748,6 +910,40 @@ export const TeacherDashboard = () => {
                           </div>
                         </div>
                       </div>
+                    </td>
+
+                    {/* Active Session Scan Status */}
+                    <td>
+                      {(() => {
+                        const rec = classRecordsToday.find((r) => r.studentId === stu.id);
+                        if (rec) {
+                          return (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                padding: '0.2rem 0.6rem',
+                                borderRadius: 'var(--radius-full)',
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                                background: '#ECFDF5',
+                                color: '#059669',
+                                border: '1px solid #A7F3D0',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <CheckCircle2 size={12} />
+                              Scanned ({rec.timestamp})
+                            </span>
+                          );
+                        }
+                        return (
+                          <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
+                            ○ Not Scanned Yet
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>

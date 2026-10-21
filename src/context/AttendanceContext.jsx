@@ -752,17 +752,34 @@ export const AttendanceProvider = ({ children }) => {
       const updatedRecords = [newRecord, ...attendanceRecords];
       setAttendanceRecords(updatedRecords);
 
+      // Compute previous and new attendance percentages
+      const currentAtt = currentStudent.attendance?.[cls.code] || { attended: 0, total: 30 };
+      const prevSubAttended = currentAtt.attended;
+      const prevSubTotal = currentAtt.total;
+      const prevSubPct = prevSubTotal > 0 ? ((prevSubAttended / prevSubTotal) * 100).toFixed(1) : '0.0';
+
+      const newSubAttended = prevSubAttended + 1;
+      const newSubTotal = Math.max(prevSubTotal, newSubAttended);
+      const newSubPct = ((newSubAttended / newSubTotal) * 100).toFixed(1);
+
+      const prevTotalAttended = totalAttended;
+      const prevOverallPct = overallPercentage;
+      const newTotalAttended = prevTotalAttended + 1;
+      const newOverallPct = totalClassesCount > 0 ? ((newTotalAttended / totalClassesCount) * 100).toFixed(1) : '0.0';
+
       // Increment student attendance
       const updatedStudents = studentsList.map((stu) => {
         if (stu.id === currentStudent.id) {
-          const currentAtt = stu.attendance?.[cls.code] || { attended: 0, total: 30 };
+          const stuAtt = stu.attendance?.[cls.code] || { attended: 0, total: 30 };
+          const updatedAttended = stuAtt.attended + 1;
+          const updatedTotal = Math.max(stuAtt.total, updatedAttended);
           return {
             ...stu,
             attendance: {
               ...stu.attendance,
               [cls.code]: {
-                attended: currentAtt.attended + 1,
-                total: currentAtt.total + 1,
+                attended: updatedAttended,
+                total: updatedTotal,
               },
             },
           };
@@ -827,6 +844,12 @@ export const AttendanceProvider = ({ children }) => {
         message: `Attendance marked successfully for ${cls.name}!`,
         record: newRecord,
         classInfo: cls,
+        prevSubPct,
+        newSubPct,
+        prevOverallPct,
+        newOverallPct,
+        studentName: currentStudent.name,
+        rollNo: currentStudent.rollNo,
       };
     } catch (err) {
       sounds.playError();

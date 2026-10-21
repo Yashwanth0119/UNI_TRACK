@@ -5,6 +5,7 @@ services:
     env: static
     buildCommand: npm run build
     staticPublishPath: ./dist
+    autoDeploy: true
     pullRequestPreviewsEnabled: true
     headers:
       - path: /*
@@ -15,6 +16,8 @@ services:
         source: /*
         destination: /index.html
     envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY

@@ -54,14 +54,25 @@ export const QrScannerModal = ({ isOpen, onClose, preselectedClassId, onScanSucc
         html5QrCodeRef.current = null;
       }
     }
+    // Also explicitly terminate any stray MediaStream video tracks to ensure the camera hardware turns off immediately
+    try {
+      const videoElements = document.querySelectorAll('#qr-reader-region video');
+      videoElements.forEach((video) => {
+        if (video.srcObject && video.srcObject.getTracks) {
+          video.srcObject.getTracks().forEach((track) => track.stop());
+          video.srcObject = null;
+        }
+      });
+    } catch (e) {}
+    window.__unitrack_active_scanner = null;
   }, []);
 
-  const handleScanSuccess = useCallback((text) => {
+  const handleScanSuccess = useCallback(async (text) => {
     if (isScanningLockedRef.current) return;
     isScanningLockedRef.current = true;
 
-    // Immediately shut down camera scanner
-    stopScanner();
+    // Immediately shut down camera scanner so hardware camera shuts off right away
+    await stopScanner();
 
     const result = markAttendanceFromScan(text);
     if (result && result.success) {
@@ -122,8 +133,12 @@ export const QrScannerModal = ({ isOpen, onClose, preselectedClassId, onScanSucc
   }, [scanStatus.type, onClose]);
 
   // Initialize camera scanner when modal opens (unless already marked)
+  // Guarantees at a time ONLY ONE scanner can be running
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      stopScanner();
+      return;
+    }
 
     if (alreadyMarkedRec) {
       stopScanner();
@@ -135,9 +150,36 @@ export const QrScannerModal = ({ isOpen, onClose, preselectedClassId, onScanSucc
     setCameraError(null);
 
     const startScanner = async () => {
+      // 1. If another global scanner exists, stop and destroy it first
+      if (window.__unitrack_active_scanner && window.__unitrack_active_scanner !== html5QrCodeRef.current) {
+        try {
+          if (window.__unitrack_active_scanner.isScanning) {
+            await window.__unitrack_active_scanner.stop();
+          }
+          window.__unitrack_active_scanner.clear();
+        } catch (e) {}
+        window.__unitrack_active_scanner = null;
+      }
+
+      // 2. Clear out any previous DOM video or stream elements
+      try {
+        const container = document.getElementById('qr-reader-region');
+        if (container) {
+          const oldVideos = container.querySelectorAll('video');
+          oldVideos.forEach((v) => {
+            if (v.srcObject && v.srcObject.getTracks) {
+              v.srcObject.getTracks().forEach((t) => t.stop());
+            }
+          });
+          container.innerHTML = '';
+        }
+      } catch (e) {}
+
+      // 3. Mount singleton scanner
       try {
         const qrCodeScanner = new Html5Qrcode('qr-reader-region');
         html5QrCodeRef.current = qrCodeScanner;
+        window.__unitrack_active_scanner = qrCodeScanner;
 
         const config = {
           fps: 10,
@@ -555,7 +597,10 @@ export const QrScannerModal = ({ isOpen, onClose, preselectedClassId, onScanSucc
                 >
                   <CheckCircle size={16} style={{ color: '#059669', flexShrink: 0 }} />
                   <div>
-                    <strong>Active Class:</strong> Scanner is enabled for <strong>{activeLiveClass.code}</strong> ({activeLiveClass.name}) • <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontWeight: 700 }}><Clock size={12} /> {activeLiveClass.time} ({activeLiveClass.periodName || 'Lecture'})</span>.
+                    <div><strong>Active Session:</strong> Scanner is enabled for <strong>{activeLiveClass.code}</strong> ({activeLiveClass.name}) • <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontWeight: 700 }}><Clock size={12} /> {activeLiveClass.time} ({activeLiveClass.periodName || 'Lecture'})</span>.</div>
+                    <div style={{ marginTop: '0.2rem', fontSize: '0.74rem', color: '#047857', fontWeight: 600 }}>
+                      🔒 Single Scanner Protection: At a time, only one QR scanner can open. All other class scanners are locked.
+                    </div>
                   </div>
                 </div>
               ) : (

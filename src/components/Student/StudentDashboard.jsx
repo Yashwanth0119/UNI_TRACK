@@ -62,12 +62,28 @@ export const StudentDashboard = () => {
   };
 
   const handleOpenScannerForClass = (classId) => {
+    // 1. Singleton restriction: At a time ONLY ONE scanner can open
+    if (scannerOpen) {
+      setToastMessage('A QR scanner is already active! At a time, only one scanner can open.');
+      setTimeout(() => setToastMessage(''), 3500);
+      return;
+    }
+
+    // 2. Prevent opening scanner if attendance is already recorded for this session
     const alreadyMarked = getStudentClassStatus(classId);
     if (alreadyMarked) {
       setToastMessage(`✓ Attendance is already marked for this class session (${alreadyMarked.timestamp}). The scanner cannot be opened again.`);
       setTimeout(() => setToastMessage(''), 4500);
       return;
     }
+
+    // 3. Ensure only the single active live class can be scanned
+    if (activeLiveClass && activeLiveClass.id !== classId) {
+      setToastMessage(`At a time, only one class scanner can be active. Currently open lecture: ${activeLiveClass.code}. All other scanners are locked.`);
+      setTimeout(() => setToastMessage(''), 4000);
+      return;
+    }
+
     setSelectedClassForScan(classId);
     setScannerOpen(true);
   };
@@ -405,11 +421,18 @@ export const StudentDashboard = () => {
                 ) : (
                   <button
                     className="btn-primary"
+                    disabled={scannerOpen}
                     onClick={() => handleOpenScannerForClass(activeLiveClass.id)}
-                    style={{ padding: '0.8rem 1.6rem', fontSize: '0.95rem' }}
+                    style={{
+                      padding: '0.8rem 1.6rem',
+                      fontSize: '0.95rem',
+                      opacity: scannerOpen ? 0.65 : 1,
+                      cursor: scannerOpen ? 'not-allowed' : 'pointer',
+                    }}
+                    title={scannerOpen ? 'A QR scanner is already active' : `Scan for ${activeLiveClass.code}`}
                   >
                     <QrCode size={19} />
-                    Scan for {activeLiveClass.code}
+                    {scannerOpen ? 'Scanner Already Active' : `Scan for ${activeLiveClass.code}`}
                   </button>
                 )}
               </div>
@@ -551,11 +574,18 @@ export const StudentDashboard = () => {
                     </span>
                   ) : (
                     <button
+                      disabled={scannerOpen}
                       onClick={() => handleOpenScannerForClass(activeLiveClass.id)}
                       className="btn-primary"
-                      style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem' }}
+                      style={{
+                        padding: '0.3rem 0.75rem',
+                        fontSize: '0.75rem',
+                        opacity: scannerOpen ? 0.65 : 1,
+                        cursor: scannerOpen ? 'not-allowed' : 'pointer',
+                      }}
+                      title={scannerOpen ? 'A QR scanner is already active' : 'Open scanner'}
                     >
-                      <QrCode size={14} /> Scan Now
+                      <QrCode size={14} /> {scannerOpen ? 'Scanner Active' : 'Scan Now'}
                     </button>
                   )}
                 </div>
@@ -769,11 +799,17 @@ export const StudentDashboard = () => {
                       ) : isLive ? (
                         <button
                           className="btn-primary"
+                          disabled={scannerOpen}
                           onClick={() => handleOpenScannerForClass(cls.id)}
-                          style={{ whiteSpace: 'nowrap' }}
+                          style={{
+                            whiteSpace: 'nowrap',
+                            opacity: scannerOpen ? 0.65 : 1,
+                            cursor: scannerOpen ? 'not-allowed' : 'pointer',
+                          }}
+                          title={scannerOpen ? 'A QR scanner is already active' : `Scan attendance for ${cls.code}`}
                         >
                           <QrCode size={16} />
-                          Scan Now
+                          {scannerOpen ? 'Scanner Active' : 'Scan Now'}
                         </button>
                       ) : (
                         <button
@@ -787,7 +823,7 @@ export const StudentDashboard = () => {
                             alignItems: 'center',
                             gap: '0.4rem',
                           }}
-                          title={`Scanner inactive for ${cls.code}. You can only scan when this class is in session.`}
+                          title={`Scanner inactive for ${cls.code}. At a time only one class scanner is open.`}
                         >
                           <Lock size={14} />
                           Scanner Inactive

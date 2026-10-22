@@ -334,11 +334,11 @@ export const Login = () => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.45rem' }}>
               {[
-                { name: 'Arun', id: '21CS001', user: 'arun', pass: 'arun123', tag: 'DSA <75%' },
-                { name: 'Priya', id: '21CS002', user: 'priya', pass: 'priya123', tag: 'Good' },
-                { name: 'Kavin', id: '21CS003', user: 'kavin', pass: 'kavin123', tag: 'DSA/OS <75%' },
-                { name: 'Divya', id: '21CS004', user: 'divya', pass: 'divya123', tag: 'DBMS <75%' },
-                { name: 'Sanjay', id: '21CS005', user: 'sanjay', pass: 'sanjay123', tag: 'Good' },
+                { name: 'Koshin', id: '21CS001', user: 'koshin', pass: 'koshin123', tag: 'DSA <75%' },
+                { name: 'Abijith', id: '21CS002', user: 'abijith', pass: 'abijith123', tag: 'Good' },
+                { name: 'Enoch John', id: '21CS003', user: 'enoch', pass: 'enoch123', tag: 'DSA/OS <75%' },
+                { name: 'Naresh', id: '21CS004', user: 'naresh', pass: 'naresh123', tag: 'DBMS <75%' },
+                { name: 'Thirush', id: '21CS005', user: 'thirush', pass: 'thirush123', tag: 'Good' },
               ].map((s) => (
                 <button
                   key={s.id}

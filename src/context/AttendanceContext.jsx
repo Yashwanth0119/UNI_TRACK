@@ -14,23 +14,30 @@ const AttendanceContext = createContext(null);
 
 // Purge old cached records so new accounts and subjects load cleanly
 try {
-  localStorage.removeItem('attendpulse_records_v7');
-  localStorage.removeItem('attendpulse_students_v7');
-  localStorage.removeItem('attendpulse_classes_v7');
-  localStorage.removeItem('attendpulse_records_v6');
-  localStorage.removeItem('attendpulse_students_v6');
+  ['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8'].forEach((v) => {
+    localStorage.removeItem(`attendpulse_classes_${v}`);
+    localStorage.removeItem(`attendpulse_records_${v}`);
+    localStorage.removeItem(`attendpulse_students_${v}`);
+    localStorage.removeItem(`attendpulse_notifs_${v}`);
+    localStorage.removeItem(`attendpulse_staff_notifs_${v}`);
+    localStorage.removeItem(`attendpulse_role_${v}`);
+    localStorage.removeItem(`unitrack_auth_session_${v}`);
+    localStorage.removeItem(`attendpulse_curr_stu_${v}`);
+    localStorage.removeItem(`attendpulse_curr_prof_${v}`);
+    localStorage.removeItem(`attendpulse_sel_class_${v}`);
+  });
 } catch (e) {}
 
-const STORAGE_KEY_CLASSES = 'attendpulse_classes_v8';
-const STORAGE_KEY_RECORDS = 'attendpulse_records_v8';
-const STORAGE_KEY_STUDENTS = 'attendpulse_students_v8';
-const STORAGE_KEY_NOTIFS = 'attendpulse_notifs_v8';
-const STORAGE_KEY_STAFF_NOTIFS = 'attendpulse_staff_notifs_v8';
-const STORAGE_KEY_ROLE = 'attendpulse_role_v8';
-const STORAGE_KEY_AUTH = 'unitrack_auth_session_v8';
-const STORAGE_KEY_CURR_STUDENT = 'attendpulse_curr_stu_v8';
-const STORAGE_KEY_CURR_TEACHER = 'attendpulse_curr_prof_v8';
-const STORAGE_KEY_SEL_CLASS = 'attendpulse_sel_class_v8';
+const STORAGE_KEY_CLASSES = 'attendpulse_classes_v9';
+const STORAGE_KEY_RECORDS = 'attendpulse_records_v9';
+const STORAGE_KEY_STUDENTS = 'attendpulse_students_v9';
+const STORAGE_KEY_NOTIFS = 'attendpulse_notifs_v9';
+const STORAGE_KEY_STAFF_NOTIFS = 'attendpulse_staff_notifs_v9';
+const STORAGE_KEY_ROLE = 'attendpulse_role_v9';
+const STORAGE_KEY_AUTH = 'unitrack_auth_session_v9';
+const STORAGE_KEY_CURR_STUDENT = 'attendpulse_curr_stu_v9';
+const STORAGE_KEY_CURR_TEACHER = 'attendpulse_curr_prof_v9';
+const STORAGE_KEY_SEL_CLASS = 'attendpulse_sel_class_v9';
 
 export const AttendanceProvider = ({ children }) => {
   const [role, setRole] = useState(() => {
@@ -69,7 +76,7 @@ export const AttendanceProvider = ({ children }) => {
   });
 
   const [studentsList, setStudentsList] = useState(() => {
-    const ALLOWED_NAMES = ['arun', 'priya', 'kavin', 'divya', 'sanjay'];
+    const ALLOWED_NAMES = ['koshin', 'abijith', 'enoch', 'naresh', 'thirush'];
     try {
       const saved = localStorage.getItem(STORAGE_KEY_STUDENTS);
       if (saved) {
@@ -168,7 +175,7 @@ export const AttendanceProvider = ({ children }) => {
         }
 
         if (stuRes.data && stuRes.data.length > 0) {
-          const ALLOWED_NAMES = ['arun', 'priya', 'kavin', 'divya', 'sanjay'];
+          const ALLOWED_NAMES = ['koshin', 'abijith', 'enoch', 'naresh', 'thirush'];
           const filtered = stuRes.data
             .filter((s) => ALLOWED_NAMES.some((n) => (s.name || '').toLowerCase().includes(n)))
             .map((s) => {

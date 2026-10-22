@@ -173,18 +173,6 @@ export const StudentDashboard = () => {
             </span>
           </h1>
         </div>
-
-        {activeLiveClass && (
-          <div className="hero-actions">
-            <button
-              className="btn-primary"
-              onClick={() => handleOpenScannerForClass(activeLiveClass.id)}
-            >
-              <QrCode size={18} />
-              Scan for {activeLiveClass.code}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Attendance Overview Strip */}

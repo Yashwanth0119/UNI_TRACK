@@ -34,6 +34,10 @@ export const TeacherDashboard = () => {
     sendStudentReminder,
     getQrPayload,
     rotateQrToken,
+    markStudentPresent,
+    markStudentAbsent,
+    markAllStudentsPresent,
+    markAllStudentsAbsent,
   } = useAttendance();
 
   const [activeModalClassId, setActiveModalClassId] = useState(null);
@@ -685,7 +689,7 @@ export const TeacherDashboard = () => {
                       </div>
                     </div>
 
-                    <div style={{ textAlign: 'right' }}>
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' }}>
                       <div
                         style={{
                           display: 'inline-flex',
@@ -697,7 +701,6 @@ export const TeacherDashboard = () => {
                           borderRadius: 'var(--radius-full)',
                           background: '#ECFDF5',
                           color: '#059669',
-                          marginBottom: '0.2rem',
                         }}
                       >
                         <CheckCircle2 size={11} />
@@ -707,6 +710,33 @@ export const TeacherDashboard = () => {
                         <Clock size={11} />
                         {rec.timestamp}
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (activeClass) {
+                            const res = markStudentAbsent(activeClass.id, {
+                              id: rec.studentId,
+                              rollNo: rec.rollNo,
+                              name: rec.studentName,
+                            });
+                            if (res?.message) setToastMessage(res.message);
+                            setTimeout(() => setToastMessage(''), 3000);
+                          }
+                        }}
+                        title="Mark Absent"
+                        style={{
+                          padding: '0.18rem 0.45rem',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          background: '#FEF2F2',
+                          color: '#DC2626',
+                          border: '1px solid #FECACA',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Mark Absent
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -815,22 +845,81 @@ export const TeacherDashboard = () => {
               {filterBelow75Only ? 'Show All Students' : `Show Below 75% Only (${below75Count})`}
             </button>
 
-            {/* Bulk Remind Button */}
-            {below75Count > 0 && (
-              <button
-                onClick={handleBulkRemindAll}
-                className="btn-primary"
-                style={{
-                  fontSize: '0.8rem',
-                  padding: '0.45rem 0.85rem',
-                  background: '#DC2626',
-                }}
-                title="Send warning notifications to all students below 75%"
-              >
-                <Send size={14} />
-                Notify All ({below75Count}) Below 75%
-              </button>
-            )}
+            {/* Staff Attendance Quick Controls & Bulk Remind */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+              {activeClass && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const res = markAllStudentsPresent(activeClass.id);
+                      if (res?.message) setToastMessage(res.message);
+                      setTimeout(() => setToastMessage(''), 3500);
+                    }}
+                    title="Mark all students Present for this active session"
+                    style={{
+                      fontSize: '0.78rem',
+                      padding: '0.42rem 0.75rem',
+                      background: '#ECFDF5',
+                      color: '#059669',
+                      border: '1px solid #A7F3D0',
+                      borderRadius: 'var(--radius-md)',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    <CheckCircle2 size={13} />
+                    Mark All Present
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const res = markAllStudentsAbsent(activeClass.id);
+                      if (res?.message) setToastMessage(res.message);
+                      setTimeout(() => setToastMessage(''), 3500);
+                    }}
+                    title="Mark all students Absent for this active session"
+                    style={{
+                      fontSize: '0.78rem',
+                      padding: '0.42rem 0.75rem',
+                      background: '#FEF2F2',
+                      color: '#DC2626',
+                      border: '1px solid #FECACA',
+                      borderRadius: 'var(--radius-md)',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    <AlertTriangle size={13} />
+                    Mark All Absent
+                  </button>
+                </>
+              )}
+
+              {/* Bulk Remind Button */}
+              {below75Count > 0 && (
+                <button
+                  onClick={handleBulkRemindAll}
+                  className="btn-primary"
+                  style={{
+                    fontSize: '0.8rem',
+                    padding: '0.45rem 0.85rem',
+                    background: '#DC2626',
+                  }}
+                  title="Send warning notifications to all students below 75%"
+                >
+                  <Send size={14} />
+                  Notify All ({below75Count}) Below 75%
+                </button>
+              )}
+            </div>
 
             {/* Search Input */}
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -862,7 +951,7 @@ export const TeacherDashboard = () => {
               <tr>
                 <th>Roll No</th>
                 <th>Student Name</th>
-                <th>Active Session Scan Status</th>
+                <th>Session Attendance & Staff Action</th>
                 <th>Subject Classes</th>
                 <th>Attendance %</th>
                 <th>Threshold Status</th>
@@ -917,36 +1006,106 @@ export const TeacherDashboard = () => {
                       </div>
                     </td>
 
-                    {/* Active Session Scan Status */}
+                    {/* Active Session Scan Status & Staff Attendance Action */}
                     <td>
                       {(() => {
-                        const rec = classRecordsToday.find((r) => r.studentId === stu.id || r.rollNo === stu.rollNo);
-                        if (rec) {
-                          return (
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.35rem',
-                                padding: '0.2rem 0.6rem',
-                                borderRadius: 'var(--radius-full)',
-                                fontSize: '0.74rem',
-                                fontWeight: 700,
-                                background: '#ECFDF5',
-                                color: '#059669',
-                                border: '1px solid #A7F3D0',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              <CheckCircle2 size={12} />
-                              Scanned ({rec.timestamp})
-                            </span>
-                          );
-                        }
+                        const stuId = (stu.id || '').toLowerCase();
+                        const stuRoll = (stu.rollNo || stu.roll_no || '').toLowerCase();
+                        const rec = classRecordsToday.find((r) => {
+                          const rStuId = (r.studentId || '').toLowerCase();
+                          const rRoll = (r.rollNo || '').toLowerCase();
+                          return rStuId === stuId || rRoll === stuRoll || rStuId === stuRoll || rRoll === stuId;
+                        });
+                        const isPresent = !!rec;
+
                         return (
-                          <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
-                            ○ Not Scanned Yet
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {isPresent ? (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                  padding: '0.2rem 0.55rem',
+                                  borderRadius: 'var(--radius-full)',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  background: '#ECFDF5',
+                                  color: '#059669',
+                                  border: '1px solid #A7F3D0',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                <CheckCircle2 size={12} />
+                                {rec.timestamp ? `Present (${rec.timestamp})` : 'Present ✓'}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                                ○ Absent / Not Scanned
+                              </span>
+                            )}
+
+                            {/* Dual Action Buttons for Staff */}
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                              {!isPresent ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (activeClass) {
+                                      const res = markStudentPresent(activeClass.id, stu);
+                                      if (res?.message) setToastMessage(res.message);
+                                      setTimeout(() => setToastMessage(''), 3500);
+                                    }
+                                  }}
+                                  title="Mark student Present (increases subject attendance %)"
+                                  style={{
+                                    padding: '0.22rem 0.55rem',
+                                    borderRadius: 'var(--radius-sm)',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    background: '#ECFDF5',
+                                    color: '#059669',
+                                    border: '1px solid #A7F3D0',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                  }}
+                                >
+                                  <CheckCircle2 size={11} />
+                                  Mark Present
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (activeClass) {
+                                      const res = markStudentAbsent(activeClass.id, stu);
+                                      if (res?.message) setToastMessage(res.message);
+                                      setTimeout(() => setToastMessage(''), 3500);
+                                    }
+                                  }}
+                                  title="Mark student Absent"
+                                  style={{
+                                    padding: '0.22rem 0.55rem',
+                                    borderRadius: 'var(--radius-sm)',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    background: '#FEF2F2',
+                                    color: '#DC2626',
+                                    border: '1px solid #FECACA',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                  }}
+                                >
+                                  <AlertTriangle size={11} />
+                                  Mark Absent
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         );
                       })()}
                     </td>

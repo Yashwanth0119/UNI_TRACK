@@ -776,19 +776,23 @@ export const AttendanceProvider = ({ children }) => {
         );
       }
 
-      // Check if student already marked today for this session
+      // Check if student already marked today for this specific class session
       const alreadyMarked = attendanceRecords.some(
         (rec) =>
-          (rec.classId === cls.id || rec.classCode === cls.code) &&
-          (rec.studentId === currentStudent.id || rec.rollNo === currentStudent.rollNo)
+          rec.classId === cls.id &&
+          (rec.studentId === currentStudent.id ||
+            rec.rollNo === currentStudent.rollNo ||
+            (currentStudent.roll_no && rec.rollNo === currentStudent.roll_no))
       );
 
       if (alreadyMarked) {
         sounds.playSuccess();
         const existingRec = attendanceRecords.find(
           (rec) =>
-            (rec.classId === cls.id || rec.classCode === cls.code) &&
-            (rec.studentId === currentStudent.id || rec.rollNo === currentStudent.rollNo)
+            rec.classId === cls.id &&
+            (rec.studentId === currentStudent.id ||
+              rec.rollNo === currentStudent.rollNo ||
+              (currentStudent.roll_no && rec.rollNo === currentStudent.roll_no))
         );
         const currentAtt = currentStudent.attendance?.[cls.code] || { attended: 0, total: 30 };
         const currentSubPct = currentAtt.total > 0 ? ((currentAtt.attended / currentAtt.total) * 100).toFixed(1) : '0.0';
@@ -816,7 +820,7 @@ export const AttendanceProvider = ({ children }) => {
       const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
       const newRecord = {
-        id: `REC-${Date.now()}`,
+        id: `REC-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
         classId: cls.id,
         classCode: cls.code,
         className: cls.name,
@@ -832,7 +836,7 @@ export const AttendanceProvider = ({ children }) => {
       const updatedRecords = [newRecord, ...attendanceRecords];
       setAttendanceRecords(updatedRecords);
 
-      // Compute previous and new attendance percentages
+      // Compute previous and new attendance percentages for THIS particular subject
       const currentAtt = currentStudent.attendance?.[cls.code] || { attended: 0, total: 30 };
       const prevSubAttended = currentAtt.attended;
       const prevSubTotal = currentAtt.total;
@@ -847,9 +851,14 @@ export const AttendanceProvider = ({ children }) => {
       const newTotalAttended = prevTotalAttended + 1;
       const newOverallPct = totalClassesCount > 0 ? ((newTotalAttended / totalClassesCount) * 100).toFixed(1) : '0.0';
 
-      // Increment student attendance
+      // Increment student attendance for this particular subject
       const updatedStudents = studentsList.map((stu) => {
-        if (stu.id === currentStudent.id) {
+        const isMatch =
+          stu.id === currentStudent.id ||
+          (currentStudent.rollNo && (stu.rollNo === currentStudent.rollNo || stu.roll_no === currentStudent.rollNo)) ||
+          (currentStudent.roll_no && (stu.rollNo === currentStudent.roll_no || stu.roll_no === currentStudent.roll_no)) ||
+          (currentStudent.email && stu.email === currentStudent.email);
+        if (isMatch) {
           const stuAtt = stu.attendance?.[cls.code] || { attended: 0, total: 30 };
           const updatedAttended = stuAtt.attended + 1;
           const updatedTotal = Math.max(stuAtt.total, updatedAttended);
@@ -899,7 +908,12 @@ export const AttendanceProvider = ({ children }) => {
             if (error) console.warn('Supabase attendance record save note:', error);
           });
 
-        const targetStudent = updatedStudents.find((s) => s.id === currentStudent.id);
+        const targetStudent = updatedStudents.find(
+          (s) =>
+            s.id === currentStudent.id ||
+            s.rollNo === currentStudent.rollNo ||
+            (currentStudent.roll_no && s.rollNo === currentStudent.roll_no)
+        );
         if (targetStudent) {
           supabase
             .from('students')
@@ -1045,56 +1059,78 @@ export const AttendanceProvider = ({ children }) => {
     setStaffNotifications(updated);
   };
 
-  // Manual toggle student attendance by professor
-  const toggleStudentAttendance = (classId, student) => {
-    const cls = classes.find((c) => c.id === classId) || currentTeacherClass;
-    if (!cls) return;
-
-    const existingIndex = attendanceRecords.findIndex(
-      (r) => r.classId === cls.id && r.studentId === student.id
+  // Helper to match student across different ID formats
+  const isStudentRecMatch = (rec, classId, student) => {
+    if (rec.classId !== classId) return false;
+    const stuId = (student.id || '').toLowerCase();
+    const stuRoll = (student.rollNo || student.roll_no || '').toLowerCase();
+    const recStuId = (rec.studentId || '').toLowerCase();
+    const recRoll = (rec.rollNo || '').toLowerCase();
+    return (
+      (stuId && recStuId === stuId) ||
+      (stuRoll && recRoll === stuRoll) ||
+      (stuRoll && recStuId === stuRoll) ||
+      (stuId && recRoll === stuId)
     );
+  };
 
-    let updatedRecords;
-    let isNowPresent = false;
+  // Helper to match student in studentList
+  const isStudentListMatch = (stu, student) => {
+    const stuId = (stu.id || '').toLowerCase();
+    const stuRoll = (stu.rollNo || stu.roll_no || '').toLowerCase();
+    const targetId = (student.id || '').toLowerCase();
+    const targetRoll = (student.rollNo || student.roll_no || '').toLowerCase();
+    return (
+      (targetId && stuId === targetId) ||
+      (targetRoll && stuRoll === targetRoll) ||
+      (targetRoll && stuId === targetRoll) ||
+      (targetId && stuRoll === targetId)
+    );
+  };
 
+  // Explicit Mark Present by Professor/Staff
+  const markStudentPresent = (classId, student) => {
+    const cls = classes.find((c) => c.id === classId) || currentTeacherClass;
+    if (!cls || !student) return { success: false };
+
+    const existingIndex = attendanceRecords.findIndex((r) => isStudentRecMatch(r, cls.id, student));
     if (existingIndex >= 0) {
-      updatedRecords = attendanceRecords.filter((_, idx) => idx !== existingIndex);
       sounds.playBeep();
-    } else {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const newRec = {
-        id: `REC-${Date.now()}`,
-        classId: cls.id,
-        classCode: cls.code,
-        className: cls.name,
-        studentId: student.id,
-        studentName: student.name,
-        rollNo: student.rollNo,
-        timestamp: timeStr,
-        date: 'Today',
-        status: 'present',
-        method: 'MANUAL_OVERRIDE',
-      };
-      updatedRecords = [newRec, ...attendanceRecords];
-      isNowPresent = true;
-      sounds.playSuccess();
+      return { success: true, alreadyMarked: true, message: `${student.name} is already marked Present ✓` };
     }
 
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const newRec = {
+      id: `REC-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      classId: cls.id,
+      classCode: cls.code,
+      className: cls.name,
+      studentId: student.id,
+      studentName: student.name,
+      rollNo: student.rollNo || student.roll_no,
+      timestamp: timeStr,
+      date: 'Today',
+      status: 'present',
+      method: 'MANUAL_OVERRIDE',
+    };
+
+    const updatedRecords = [newRec, ...attendanceRecords];
     setAttendanceRecords(updatedRecords);
 
+    // Increase the student's attendance for this specific subject
     const updatedStudents = studentsList.map((stu) => {
-      if (stu.id === student.id) {
+      if (isStudentListMatch(stu, student)) {
         const currentAtt = stu.attendance?.[cls.code] || { attended: 0, total: 30 };
+        const newAttended = currentAtt.attended + 1;
+        const newTotal = Math.max(currentAtt.total, newAttended);
         return {
           ...stu,
           attendance: {
             ...stu.attendance,
             [cls.code]: {
-              ...currentAtt,
-              attended: isNowPresent
-                ? currentAtt.attended + 1
-                : Math.max(0, currentAtt.attended - 1),
+              attended: newAttended,
+              total: newTotal,
             },
           },
         };
@@ -1113,39 +1149,28 @@ export const AttendanceProvider = ({ children }) => {
       channel.close();
     } catch (e) {}
 
-    // Sync manual toggle to Supabase
+    // Sync to Supabase
     if (isSupabaseConfigured() && supabase) {
-      if (isNowPresent) {
-        const targetRec = updatedRecords[0];
-        supabase
-          .from('attendance_records')
-          .insert({
-            id: targetRec.id,
-            class_id: targetRec.classId,
-            class_code: targetRec.classCode,
-            class_name: targetRec.className,
-            student_id: targetRec.studentId,
-            student_name: targetRec.studentName,
-            roll_no: targetRec.rollNo,
-            timestamp: targetRec.timestamp,
-            date: targetRec.date,
-            status: targetRec.status,
-            method: targetRec.method,
-          })
-          .then(({ error }) => {
-            if (error) console.warn('Supabase toggle insert note:', error);
-          });
-      } else {
-        supabase
-          .from('attendance_records')
-          .delete()
-          .match({ class_id: cls.id, student_id: student.id })
-          .then(({ error }) => {
-            if (error) console.warn('Supabase toggle delete note:', error);
-          });
-      }
+      supabase
+        .from('attendance_records')
+        .insert({
+          id: newRec.id,
+          class_id: newRec.classId,
+          class_code: newRec.classCode,
+          class_name: newRec.className,
+          student_id: newRec.studentId,
+          student_name: newRec.studentName,
+          roll_no: newRec.rollNo,
+          timestamp: newRec.timestamp,
+          date: newRec.date,
+          status: newRec.status,
+          method: newRec.method,
+        })
+        .then(({ error }) => {
+          if (error) console.warn('Supabase mark present insert note:', error);
+        });
 
-      const updatedStu = updatedStudents.find((s) => s.id === student.id);
+      const updatedStu = updatedStudents.find((s) => isStudentListMatch(s, student));
       if (updatedStu) {
         supabase
           .from('students')
@@ -1156,6 +1181,260 @@ export const AttendanceProvider = ({ children }) => {
           });
       }
     }
+
+    sounds.playSuccess();
+    return { success: true, message: `Marked ${student.name} as Present ✓ (Attendance increased)` };
+  };
+
+  // Explicit Mark Absent by Professor/Staff
+  const markStudentAbsent = (classId, student) => {
+    const cls = classes.find((c) => c.id === classId) || currentTeacherClass;
+    if (!cls || !student) return { success: false };
+
+    const existingIndex = attendanceRecords.findIndex((r) => isStudentRecMatch(r, cls.id, student));
+    if (existingIndex < 0) {
+      sounds.playBeep();
+      return { success: true, alreadyMarked: true, message: `${student.name} is already marked Absent.` };
+    }
+
+    const removedRec = attendanceRecords[existingIndex];
+    const updatedRecords = attendanceRecords.filter((_, idx) => idx !== existingIndex);
+    setAttendanceRecords(updatedRecords);
+
+    // Decrease the student's attendance for this specific subject (reverting present mark)
+    const updatedStudents = studentsList.map((stu) => {
+      if (isStudentListMatch(stu, student)) {
+        const currentAtt = stu.attendance?.[cls.code] || { attended: 0, total: 30 };
+        return {
+          ...stu,
+          attendance: {
+            ...stu.attendance,
+            [cls.code]: {
+              ...currentAtt,
+              attended: Math.max(0, currentAtt.attended - 1),
+            },
+          },
+        };
+      }
+      return stu;
+    });
+    setStudentsList(updatedStudents);
+
+    try {
+      const channel = new BroadcastChannel('attendpulse_sync');
+      channel.postMessage({
+        type: 'ATTENDANCE_MARKED',
+        records: updatedRecords,
+        studentsList: updatedStudents,
+      });
+      channel.close();
+    } catch (e) {}
+
+    // Sync to Supabase
+    if (isSupabaseConfigured() && supabase) {
+      if (removedRec?.id) {
+        supabase.from('attendance_records').delete().eq('id', removedRec.id).then(({ error }) => {
+          if (error) console.warn('Supabase mark absent delete note:', error);
+        });
+      } else {
+        supabase
+          .from('attendance_records')
+          .delete()
+          .match({ class_id: cls.id, student_id: student.id })
+          .then(({ error }) => {
+            if (error) console.warn('Supabase mark absent delete note:', error);
+          });
+      }
+
+      const updatedStu = updatedStudents.find((s) => isStudentListMatch(s, student));
+      if (updatedStu) {
+        supabase
+          .from('students')
+          .update({ attendance: updatedStu.attendance })
+          .eq('id', updatedStu.id)
+          .then(({ error }) => {
+            if (error) console.warn('Supabase student update note:', error);
+          });
+      }
+    }
+
+    sounds.playBeep();
+    return { success: true, message: `Marked ${student.name} as Absent.` };
+  };
+
+  // Toggle student attendance by professor
+  const toggleStudentAttendance = (classId, student) => {
+    const cls = classes.find((c) => c.id === classId) || currentTeacherClass;
+    if (!cls || !student) return;
+
+    const existingIndex = attendanceRecords.findIndex((r) => isStudentRecMatch(r, cls.id, student));
+    if (existingIndex >= 0) {
+      return markStudentAbsent(classId, student);
+    } else {
+      return markStudentPresent(classId, student);
+    }
+  };
+
+  // Bulk Mark All Students Present
+  const markAllStudentsPresent = (classId) => {
+    const cls = classes.find((c) => c.id === classId) || currentTeacherClass;
+    if (!cls) return;
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const newRecordsToAdd = [];
+    studentsList.forEach((stu) => {
+      const alreadyPresent = attendanceRecords.some((r) => isStudentRecMatch(r, cls.id, stu));
+      if (!alreadyPresent) {
+        newRecordsToAdd.push({
+          id: `REC-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          classId: cls.id,
+          classCode: cls.code,
+          className: cls.name,
+          studentId: stu.id,
+          studentName: stu.name,
+          rollNo: stu.rollNo || stu.roll_no,
+          timestamp: timeStr,
+          date: 'Today',
+          status: 'present',
+          method: 'MANUAL_OVERRIDE',
+        });
+      }
+    });
+
+    if (newRecordsToAdd.length === 0) {
+      sounds.playBeep();
+      return { success: true, message: 'All students are already marked Present!' };
+    }
+
+    const updatedRecords = [...newRecordsToAdd, ...attendanceRecords];
+    setAttendanceRecords(updatedRecords);
+
+    const addedIds = new Set(newRecordsToAdd.map((r) => (r.studentId || '').toLowerCase()));
+    const addedRolls = new Set(newRecordsToAdd.map((r) => (r.rollNo || '').toLowerCase()));
+
+    const updatedStudents = studentsList.map((stu) => {
+      const match =
+        addedIds.has((stu.id || '').toLowerCase()) ||
+        addedRolls.has((stu.rollNo || stu.roll_no || '').toLowerCase());
+      if (match) {
+        const currentAtt = stu.attendance?.[cls.code] || { attended: 0, total: 30 };
+        const newAttended = currentAtt.attended + 1;
+        const newTotal = Math.max(currentAtt.total, newAttended);
+        return {
+          ...stu,
+          attendance: {
+            ...stu.attendance,
+            [cls.code]: {
+              attended: newAttended,
+              total: newTotal,
+            },
+          },
+        };
+      }
+      return stu;
+    });
+    setStudentsList(updatedStudents);
+
+    try {
+      const channel = new BroadcastChannel('attendpulse_sync');
+      channel.postMessage({
+        type: 'ATTENDANCE_MARKED',
+        records: updatedRecords,
+        studentsList: updatedStudents,
+      });
+      channel.close();
+    } catch (e) {}
+
+    if (isSupabaseConfigured() && supabase) {
+      newRecordsToAdd.forEach((nr) => {
+        supabase.from('attendance_records').insert({
+          id: nr.id,
+          class_id: nr.classId,
+          class_code: nr.classCode,
+          class_name: nr.className,
+          student_id: nr.studentId,
+          student_name: nr.studentName,
+          roll_no: nr.rollNo,
+          timestamp: nr.timestamp,
+          date: nr.date,
+          status: nr.status,
+          method: nr.method,
+        }).then(() => {});
+      });
+
+      updatedStudents.forEach((st) => {
+        supabase.from('students').update({ attendance: st.attendance }).eq('id', st.id).then(() => {});
+      });
+    }
+
+    sounds.playSuccess();
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.6 },
+    });
+    return { success: true, message: `Marked all students as Present ✓` };
+  };
+
+  // Bulk Mark All Students Absent
+  const markAllStudentsAbsent = (classId) => {
+    const cls = classes.find((c) => c.id === classId) || currentTeacherClass;
+    if (!cls) return;
+
+    const recordsToRemove = attendanceRecords.filter((r) => r.classId === cls.id);
+    if (recordsToRemove.length === 0) {
+      sounds.playBeep();
+      return { success: true, message: 'All students are already marked Absent.' };
+    }
+
+    const removedIds = new Set(recordsToRemove.map((r) => (r.studentId || '').toLowerCase()));
+    const removedRolls = new Set(recordsToRemove.map((r) => (r.rollNo || '').toLowerCase()));
+
+    const updatedRecords = attendanceRecords.filter((r) => r.classId !== cls.id);
+    setAttendanceRecords(updatedRecords);
+
+    const updatedStudents = studentsList.map((stu) => {
+      const match =
+        removedIds.has((stu.id || '').toLowerCase()) ||
+        removedRolls.has((stu.rollNo || stu.roll_no || '').toLowerCase());
+      if (match) {
+        const currentAtt = stu.attendance?.[cls.code] || { attended: 0, total: 30 };
+        return {
+          ...stu,
+          attendance: {
+            ...stu.attendance,
+            [cls.code]: {
+              ...currentAtt,
+              attended: Math.max(0, currentAtt.attended - 1),
+            },
+          },
+        };
+      }
+      return stu;
+    });
+    setStudentsList(updatedStudents);
+
+    try {
+      const channel = new BroadcastChannel('attendpulse_sync');
+      channel.postMessage({
+        type: 'ATTENDANCE_MARKED',
+        records: updatedRecords,
+        studentsList: updatedStudents,
+      });
+      channel.close();
+    } catch (e) {}
+
+    if (isSupabaseConfigured() && supabase) {
+      supabase.from('attendance_records').delete().eq('class_id', cls.id).then(() => {});
+      updatedStudents.forEach((st) => {
+        supabase.from('students').update({ attendance: st.attendance }).eq('id', st.id).then(() => {});
+      });
+    }
+
+    sounds.playBeep();
+    return { success: true, message: `Marked all students as Absent.` };
   };
 
   const resetDemoData = () => {
@@ -1202,6 +1481,10 @@ export const AttendanceProvider = ({ children }) => {
         getQrPayload,
         markAttendanceFromScan,
         toggleStudentAttendance,
+        markStudentPresent,
+        markStudentAbsent,
+        markAllStudentsPresent,
+        markAllStudentsAbsent,
         resetDemoData,
         studentDailyClasses,
         // Sequential Teacher Class Operations

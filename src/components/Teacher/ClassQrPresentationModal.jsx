@@ -22,13 +22,23 @@ export const ClassQrPresentationModal = ({ isOpen, onClose, classId }) => {
     attendanceRecords,
     allStudents,
     toggleStudentAttendance,
+    markStudentPresent,
+    markStudentAbsent,
+    markAllStudentsPresent,
+    markAllStudentsAbsent,
   } = useAttendance();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const dynamicRefresh = true;
   const [countdown, setCountdown] = useState(20);
   const [searchQuery, setSearchQuery] = useState('');
+  const [toastMessage, setToastMessage] = useState('');
   const modalContainerRef = useRef(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
 
   const selectedClass = classes.find((c) => c.id === classId) || classes[0];
 
@@ -319,40 +329,123 @@ export const ClassQrPresentationModal = ({ isOpen, onClose, classId }) => {
                 </button>
               </div>
 
-              {/* Student Search & Quick Stats */}
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {/* Toast Message */}
+              {toastMessage && (
                 <div
                   style={{
-                    flex: 1,
-                    position: 'relative',
+                    padding: '0.55rem 0.85rem',
+                    background: '#10b981',
+                    color: '#FFFFFF',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
                     display: 'flex',
                     alignItems: 'center',
+                    gap: '0.45rem',
+                    animation: 'fadeIn 0.2s ease',
                   }}
                 >
-                  <Search
-                    size={15}
+                  <CheckCircle size={15} />
+                  {toastMessage}
+                </div>
+              )}
+
+              {/* Student Search & Quick Stats & Bulk Actions */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div
                     style={{
-                      position: 'absolute',
-                      left: '0.75rem',
-                      color: 'var(--text-dim)',
+                      flex: 1,
+                      minWidth: '200px',
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
                     }}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Search enrolled student by name or roll..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem 0.55rem 2.2rem',
-                      background: '#FFFFFF',
-                      border: '1px solid var(--border-light)',
-                      borderRadius: 'var(--radius-md)',
-                      color: 'var(--text-main)',
-                      fontSize: '0.82rem',
-                      outline: 'none',
-                    }}
-                  />
+                  >
+                    <Search
+                      size={15}
+                      style={{
+                        position: 'absolute',
+                        left: '0.75rem',
+                        color: 'var(--text-dim)',
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Search enrolled student by name or roll..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.55rem 0.75rem 0.55rem 2.2rem',
+                        background: '#FFFFFF',
+                        border: '1px solid var(--border-light)',
+                        borderRadius: 'var(--radius-md)',
+                        color: 'var(--text-main)',
+                        fontSize: '0.82rem',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  {/* Staff Bulk Marking Buttons */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const res = markAllStudentsPresent(selectedClass.id);
+                        if (res?.message) showToast(res.message);
+                      }}
+                      title="Mark all enrolled students Present for this session"
+                      style={{
+                        padding: '0.42rem 0.75rem',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        background: '#ECFDF5',
+                        color: '#059669',
+                        border: '1px solid #A7F3D0',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                      }}
+                    >
+                      <CheckCircle size={13} />
+                      Mark All Present
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const res = markAllStudentsAbsent(selectedClass.id);
+                        if (res?.message) showToast(res.message);
+                      }}
+                      title="Mark all students Absent for this session"
+                      style={{
+                        padding: '0.42rem 0.75rem',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        background: '#FEF2F2',
+                        color: '#DC2626',
+                        border: '1px solid #FECACA',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                      }}
+                    >
+                      <X size={13} />
+                      Mark All Absent
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <span>Staff Quick Manual Attendance Override:</span>
+                  <strong style={{ color: '#059669' }}>
+                    {classRecords.length} of {safeStudents.length} Students Present
+                  </strong>
                 </div>
               </div>
 
@@ -364,13 +457,19 @@ export const ClassQrPresentationModal = ({ isOpen, onClose, classId }) => {
                       <th>Roll No</th>
                       <th>Student Name</th>
                       <th>Time / Status</th>
-                      <th style={{ textAlign: 'center' }}>Action</th>
+                      <th style={{ textAlign: 'center' }}>Staff Attendance Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredStudents.map((stu) => {
-                      const isPresent = presentStudentIds.has(stu.id) || presentStudentIds.has(stu.rollNo);
-                      const rec = classRecords.find((r) => r.studentId === stu.id || r.rollNo === stu.rollNo);
+                      const stuId = (stu.id || '').toLowerCase();
+                      const stuRoll = (stu.rollNo || stu.roll_no || '').toLowerCase();
+                      const isPresent = presentStudentIds.has(stuId) || presentStudentIds.has(stuRoll);
+                      const rec = classRecords.find(
+                        (r) =>
+                          (r.studentId && r.studentId.toLowerCase() === stuId) ||
+                          (r.rollNo && (r.rollNo.toLowerCase() === stuRoll || r.rollNo.toLowerCase() === stuId))
+                      );
 
                       return (
                         <tr
@@ -403,29 +502,70 @@ export const ClassQrPresentationModal = ({ isOpen, onClose, classId }) => {
                             )}
                           </td>
                           <td style={{ textAlign: 'center' }}>
-                            <button
-                              onClick={() => toggleStudentAttendance(selectedClass.id, stu)}
-                              title={
-                                isPresent
-                                  ? 'Click to mark Absent'
-                                  : 'Click to mark Present manually'
-                              }
+                            <div
                               style={{
-                                padding: '0.3rem 0.65rem',
-                                borderRadius: 'var(--radius-sm)',
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                background: isPresent
-                                  ? '#FEF2F2'
-                                  : '#ECFDF5',
-                                color: isPresent ? '#DC2626' : '#059669',
-                                border: isPresent
-                                  ? '1px solid #FECACA'
-                                  : '1px solid #A7F3D0',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                justifyContent: 'center',
                               }}
                             >
-                              {isPresent ? 'Mark Absent' : 'Mark Present'}
-                            </button>
+                              {/* Option 1: Mark Present Button */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const res = markStudentPresent(selectedClass.id, stu);
+                                  if (res?.message) showToast(res.message);
+                                }}
+                                title="Click to mark student Present (increases subject attendance %)"
+                                style={{
+                                  padding: '0.32rem 0.65rem',
+                                  borderRadius: 'var(--radius-sm)',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.28rem',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease',
+                                  background: isPresent ? '#059669' : '#ECFDF5',
+                                  color: isPresent ? '#FFFFFF' : '#059669',
+                                  border: isPresent ? '1px solid #047857' : '1px solid #A7F3D0',
+                                  boxShadow: isPresent ? '0 1px 4px rgba(5, 150, 105, 0.3)' : 'none',
+                                }}
+                              >
+                                <CheckCircle size={12} />
+                                {isPresent ? 'Present ✓' : 'Mark Present'}
+                              </button>
+
+                              {/* Option 2: Mark Absent Button */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const res = markStudentAbsent(selectedClass.id, stu);
+                                  if (res?.message) showToast(res.message);
+                                }}
+                                title="Click to mark student Absent"
+                                style={{
+                                  padding: '0.32rem 0.65rem',
+                                  borderRadius: 'var(--radius-sm)',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.28rem',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease',
+                                  background: !isPresent ? '#DC2626' : '#FEF2F2',
+                                  color: !isPresent ? '#FFFFFF' : '#DC2626',
+                                  border: !isPresent ? '1px solid #B91C1C' : '1px solid #FECACA',
+                                  boxShadow: !isPresent ? '0 1px 4px rgba(220, 38, 38, 0.3)' : 'none',
+                                }}
+                              >
+                                <X size={12} />
+                                {!isPresent ? 'Absent ✗' : 'Mark Absent'}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );

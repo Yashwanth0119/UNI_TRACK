@@ -1,378 +1,223 @@
-// Mock Data for University Attendance Portal - 3 Specific Subjects & 3 Dedicated Teachers
+// UniTrack - Smart Attendance System
+// Standardized Mock Data: 5 Students, 2 Teachers, 3 Subjects, 3 Daily Classes
 
-export const TEACHERS = [
+export const SUBJECTS = [
   {
-    id: 'PROF-101',
-    name: 'Dr. Robert Vance',
-    empId: 'FAC-CSE-101',
-    email: 'robert.vance@university.edu',
-    password: 'vance123',
-    department: 'Computer Science & Engineering',
-    designation: 'Professor & Practice Head',
-    subjectCode: 'APP101',
-    subjectName: 'Advanced Programming and Practice',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250',
+    code: 'DSA101',
+    name: 'Data Structures and Algorithms',
+    type: 'Core Mandatory',
+    credits: 4,
+    professorId: 'FAC-001',
+    professorName: 'Dr. Rajesh Sharma',
+    room: 'Lab 201 (Computing Wing)',
+    color: '#2563EB',
+    lightColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
   },
   {
-    id: 'PROF-102',
-    name: 'Dr. Elena Rostova',
-    empId: 'FAC-CSE-102',
-    email: 'elena.rostova@university.edu',
-    password: 'elena123',
-    department: 'Computer Science & Engineering',
-    designation: 'Associate Professor & Algorithmics Lead',
-    subjectCode: 'DSA102',
-    subjectName: 'Data Structures and Algorithms',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=250',
+    code: 'OS102',
+    name: 'Operating Systems',
+    type: 'Core Mandatory',
+    credits: 4,
+    professorId: 'FAC-002',
+    professorName: 'Prof. Meera Nair',
+    room: 'Hall 102 (Systems Complex)',
+    color: '#059669',
+    lightColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
   },
   {
-    id: 'PROF-103',
-    name: 'Dr. Marcus Chen',
-    empId: 'FAC-CSE-103',
-    email: 'marcus.chen@university.edu',
-    password: 'chen123',
-    department: 'Computer Science & Engineering',
-    designation: 'Professor & Systems Director',
-    subjectCode: 'OS103',
-    subjectName: 'Operating Systems',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=250',
+    code: 'DBMS103',
+    name: 'Database Management Systems',
+    type: 'Elective / Specialized',
+    credits: 3,
+    professorId: 'FAC-002',
+    professorName: 'Prof. Meera Nair',
+    room: 'Hall 305 (Database Lab)',
+    color: '#7C3AED',
+    lightColor: '#F5F3FF',
+    borderColor: '#DDD6FE',
   },
 ];
 
-// Students with login credentials and per-subject attendance records
+export const TEACHERS = [
+  {
+    id: 'FAC-001',
+    name: 'Dr. Rajesh Sharma',
+    empId: 'FAC-001',
+    email: 'rajesh.sharma@unitrack.edu',
+    username: 'rajesh',
+    password: 'rajesh123',
+    department: 'Computer Science & Engineering',
+    designation: 'Professor & HOD',
+    assignedSubjects: ['DSA101'],
+    subjectCode: 'DSA101',
+    subjectName: 'Data Structures and Algorithms',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+  },
+  {
+    id: 'FAC-002',
+    name: 'Prof. Meera Nair',
+    empId: 'FAC-002',
+    email: 'meera.nair@unitrack.edu',
+    username: 'meera',
+    password: 'meera123',
+    department: 'Computer Science & Engineering',
+    designation: 'Associate Professor & Systems Lead',
+    assignedSubjects: ['OS102', 'DBMS103'],
+    subjectCode: 'OS102',
+    subjectName: 'Operating Systems & DBMS',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=250',
+  },
+];
+
+// Exactly 5 Students
 export const STUDENTS = [
   {
     id: 's1',
-    name: 'Koshin',
-    rollNo: '21BCSE001',
-    email: 'koshin@university.edu',
-    password: 'koshin123',
+    name: 'Arun',
+    rollNo: '21CS001',
+    email: 'arun@unitrack.edu',
+    username: 'arun',
+    password: 'arun123',
     department: 'Computer Science & Engineering',
     semester: 'Semester 5',
+    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=250',
     attendance: {
-      APP101: { attended: 28, total: 30 }, // 93.3%
-      DSA102: { attended: 26, total: 32 }, // 81.3%
-      OS103:  { attended: 18, total: 27 }, // 66.7% (<75% - Warning)
+      DSA101:  { attended: 21, total: 30 }, // 70.0% (<75% - Warning)
+      OS102:   { attended: 26, total: 30 }, // 86.7%
+      DBMS103: { attended: 25, total: 30 }, // 83.3%
     },
   },
   {
     id: 's2',
-    name: 'Abijith vasudev',
-    rollNo: '21BCSE002',
-    email: 'abijith.vasudev@university.edu',
-    password: 'abijith123',
+    name: 'Priya',
+    rollNo: '21CS002',
+    email: 'priya@unitrack.edu',
+    username: 'priya',
+    password: 'priya123',
     department: 'Computer Science & Engineering',
     semester: 'Semester 5',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=250',
     attendance: {
-      APP101: { attended: 20, total: 30 }, // 66.7% (<75% - Warning)
-      DSA102: { attended: 29, total: 32 }, // 90.6%
-      OS103:  { attended: 25, total: 27 }, // 92.6%
+      DSA101:  { attended: 27, total: 30 }, // 90.0%
+      OS102:   { attended: 24, total: 30 }, // 80.0%
+      DBMS103: { attended: 28, total: 30 }, // 93.3%
     },
   },
   {
     id: 's3',
-    name: 'Enoch john',
-    rollNo: '21BCSE003',
-    email: 'enoch.john@university.edu',
-    password: 'enoch123',
+    name: 'Kavin',
+    rollNo: '21CS003',
+    email: 'kavin@unitrack.edu',
+    username: 'kavin',
+    password: 'kavin123',
     department: 'Computer Science & Engineering',
     semester: 'Semester 5',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250',
     attendance: {
-      APP101: { attended: 21, total: 30 }, // 70.0% (<75% - Warning)
-      DSA102: { attended: 22, total: 32 }, // 68.8% (<75% - Warning)
-      OS103:  { attended: 24, total: 27 }, // 88.9%
+      DSA101:  { attended: 19, total: 30 }, // 63.3% (<75% - Warning)
+      OS102:   { attended: 20, total: 30 }, // 66.7% (<75% - Warning)
+      DBMS103: { attended: 27, total: 30 }, // 90.0%
     },
   },
   {
     id: 's4',
-    name: 'Thirush',
-    rollNo: '21BCSE004',
-    email: 'thirush@university.edu',
-    password: 'thirush123',
+    name: 'Divya',
+    rollNo: '21CS004',
+    email: 'divya@unitrack.edu',
+    username: 'divya',
+    password: 'divya123',
     department: 'Computer Science & Engineering',
     semester: 'Semester 5',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=250',
     attendance: {
-      APP101: { attended: 27, total: 30 }, // 90.0%
-      DSA102: { attended: 21, total: 32 }, // 65.6% (<75% - Warning)
-      OS103:  { attended: 19, total: 27 }, // 70.4% (<75% - Warning)
+      DSA101:  { attended: 25, total: 30 }, // 83.3%
+      OS102:   { attended: 28, total: 30 }, // 93.3%
+      DBMS103: { attended: 21, total: 30 }, // 70.0% (<75% - Warning)
     },
   },
   {
     id: 's5',
-    name: 'Naresh',
-    rollNo: '21BCSE005',
-    email: 'naresh@university.edu',
-    password: 'naresh123',
+    name: 'Sanjay',
+    rollNo: '21CS005',
+    email: 'sanjay@unitrack.edu',
+    username: 'sanjay',
+    password: 'sanjay123',
     department: 'Computer Science & Engineering',
     semester: 'Semester 5',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=250',
     attendance: {
-      APP101: { attended: 29, total: 30 }, // 96.7%
-      DSA102: { attended: 30, total: 32 }, // 93.8%
-      OS103:  { attended: 20, total: 27 }, // 74.1% (<75% - Warning)
+      DSA101:  { attended: 28, total: 30 }, // 93.3%
+      OS102:   { attended: 27, total: 30 }, // 90.0%
+      DBMS103: { attended: 26, total: 30 }, // 86.7%
     },
   },
 ];
 
-// TODAY'S SEQUENTIAL CLASS SCHEDULE FOR EACH FACULTY MEMBER (4 CLASSES PER DAY)
+// Exactly 3 Classes Scheduled for Today (One for each subject)
 export const INITIAL_CLASSES = [
-  // Dr. Robert Vance (APP101) - 4 Sessions Today
   {
-    id: 'CLS-APP101-1',
-    code: 'APP101',
-    name: 'Advanced Programming - Architecture & Clean Patterns',
-    professorId: 'PROF-101',
-    professorName: 'Dr. Robert Vance',
-    room: 'Hall 401 (Software Systems Lab)',
-    time: '09:00 AM - 10:15 AM',
-    periodName: 'Period 1',
-    status: 'ready', // First class is ready to be conducted
-    order: 1,
-    totalEnrolled: 5,
-    sessionDate: 'Today',
-    creditHours: 4,
-    color: '#4F46E5',
-    isStudentDaily: true, // Included in student's 4-class daily schedule
-    studentPeriodOrder: 1,
-    description: 'Enterprise design patterns, clean architecture, dependency injection, and memory safety.',
-  },
-  {
-    id: 'CLS-APP101-2',
-    code: 'APP101',
-    name: 'Advanced Programming - Memory Safety & Pointers Lab',
-    professorId: 'PROF-101',
-    professorName: 'Dr. Robert Vance',
-    room: 'Systems Lab 4B',
-    time: '10:30 AM - 11:45 AM',
-    periodName: 'Period 2',
-    status: 'locked', // Locked until Class 1 completes
-    order: 2,
-    totalEnrolled: 5,
-    sessionDate: 'Today',
-    creditHours: 4,
-    color: '#6366f1',
-    isStudentDaily: false,
-    description: 'Hands-on thread pools, atomic primitives, and asynchronous I/O debugging.',
-  },
-  {
-    id: 'CLS-APP101-3',
-    code: 'APP101',
-    name: 'Advanced Programming - Concurrency & Microservices',
-    professorId: 'PROF-101',
-    professorName: 'Dr. Robert Vance',
-    room: 'Hall 401 (Software Systems Lab)',
-    time: '01:00 PM - 02:15 PM',
-    periodName: 'Period 3',
-    status: 'locked', // Locked until Class 2 completes
-    order: 3,
-    totalEnrolled: 5,
-    sessionDate: 'Today',
-    creditHours: 4,
-    color: '#818cf8',
-    isStudentDaily: false,
-    description: 'Peer code review walkthrough, performance profiling, and test coverage evaluation.',
-  },
-  {
-    id: 'CLS-APP101-4',
-    code: 'APP101',
-    name: 'Advanced Programming - Capstone Evaluation & Lab Demo',
-    professorId: 'PROF-101',
-    professorName: 'Dr. Robert Vance',
-    room: 'Systems Lab 4B',
-    time: '02:30 PM - 03:45 PM',
-    periodName: 'Period 4',
-    status: 'locked', // Locked until Class 3 completes
-    order: 4,
-    totalEnrolled: 5,
-    sessionDate: 'Today',
-    creditHours: 4,
-    color: '#4F46E5',
-    isStudentDaily: true, // Included in student's 4-class daily schedule (Lab period)
-    studentPeriodOrder: 4,
-    description: 'Live interactive demonstrations, benchmark testing, and automated evaluation.',
-  },
-
-  // Dr. Elena Rostova (DSA102) - 4 Sessions Today
-  {
-    id: 'CLS-DSA102-1',
-    code: 'DSA102',
-    name: 'Data Structures - Algorithmic Complexity & Red-Black Trees',
-    professorId: 'PROF-102',
-    professorName: 'Dr. Elena Rostova',
-    room: 'Hall 301 (Algorithmic Computing)',
-    time: '09:00 AM - 10:15 AM',
-    periodName: 'Period 1',
-    status: 'ready',
-    order: 1,
-    totalEnrolled: 5,
-    sessionDate: 'Today',
-    creditHours: 4,
-    color: '#0284c7',
-    isStudentDaily: false,
-    description: 'Dynamic programming, red-black self-balancing trees, and flow network analysis.',
-  },
-  {
-    id: 'CLS-DSA102-2',
-    code: 'DSA102',
-    name: 'Data Structures - Dynamic Programming & Flow Networks',
-    professorId: 'PROF-102',
-    professorName: 'Dr. Elena Rostova',
-    room: 'Hall 301 (Algorithmic Computing)',
-    time: '10:30 AM - 11:45 AM',
-    periodName: 'Period 2',
-    status: 'locked',
-    order: 2,
-    totalEnrolled: 5,
-    sessionDate: 'Today',
-    creditHours: 4,
-    color: '#06b6d4',
-    isStudentDaily: true, // Included in student's 4-class daily schedule
-    studentPeriodOrder: 2,
-    description: 'Memoization patterns, optimal substructure, and maximum bipartite matching.',
-  },
-  {
-    id: 'CLS-DSA102-3',
-    code: 'DSA102',
-    name: 'Data Structures - Graph Algorithms Lab',
-    professorId: 'PROF-102',
-    professorName: 'Dr. Elena Rostova',
-    room: 'Lab 3B',
-    time: '01:00 PM - 02:15 PM',
-    periodName: 'Period 3',
-    status: 'locked',
-    order: 3,
-    totalEnrolled: 5,
-    sessionDate: 'Today',
-    creditHours: 4,
-    color: '#0284c7',
-    isStudentDaily: false,
-    description: 'Shortest path implementation, minimum spanning trees, and network flow algorithms.',
-  },
-  {
-    id: 'CLS-DSA102-4',
-    code: 'DSA102',
-    name: 'Data Structures - Competitive Problem Solving Workshop',
-    professorId: 'PROF-102',
-    professorName: 'Dr. Elena Rostova',
-    room: 'Lab 3B',
-    time: '02:30 PM - 03:45 PM',
-    periodName: 'Period 4',
-    status: 'locked',
-    order: 4,
-    totalEnrolled: 5,
-    sessionDate: 'Today',
-    creditHours: 4,
-    color: '#38bdf8',
-    isStudentDaily: false,
-    description: 'LeetCode hard patterns, tree decompositions, and contest simulations.',
-  },
-
-  // Dr. Marcus Chen (OS103) - 4 Sessions Today
-  {
-    id: 'CLS-OS103-1',
-    code: 'OS103',
-    name: 'Operating Systems - Kernel & Virtual Memory Virtualization',
-    professorId: 'PROF-103',
-    professorName: 'Dr. Marcus Chen',
-    room: 'Hall 205 (Systems Architecture Complex)',
-    time: '09:00 AM - 10:15 AM',
-    periodName: 'Period 1',
-    status: 'ready',
-    order: 1,
-    totalEnrolled: 5,
-    sessionDate: 'Today',
-    creditHours: 4,
-    color: '#059669',
-    isStudentDaily: false,
-    description: 'Kernel system calls, page tables, TLB caching, and virtual address translation.',
-  },
-  {
-    id: 'CLS-OS103-2',
-    code: 'OS103',
-    name: 'Operating Systems - POSIX Synchronization Lab',
-    professorId: 'PROF-103',
-    professorName: 'Dr. Marcus Chen',
-    room: 'Lab 2A',
-    time: '10:30 AM - 11:45 AM',
-    periodName: 'Period 2',
-    status: 'locked',
-    order: 2,
-    totalEnrolled: 5,
-    sessionDate: 'Today',
-    creditHours: 4,
-    color: '#10b981',
-    isStudentDaily: false,
-    description: 'POSIX mutexes, semaphores, deadlock simulation, and reader-writer problems.',
-  },
-  {
-    id: 'CLS-OS103-3',
-    code: 'OS103',
-    name: 'Operating Systems - File Systems & Disk Scheduling',
-    professorId: 'PROF-103',
-    professorName: 'Dr. Marcus Chen',
-    room: 'Hall 205 (Systems Architecture Complex)',
-    time: '01:00 PM - 02:15 PM',
-    periodName: 'Period 3',
-    status: 'locked',
-    order: 3,
-    totalEnrolled: 5,
-    sessionDate: 'Today',
-    creditHours: 4,
-    color: '#059669',
-    isStudentDaily: true, // Included in student's 4-class daily schedule
-    studentPeriodOrder: 3,
-    description: 'Ext4 inode structures, journaling, RAID architecture, and cache coherence.',
-  },
-  {
-    id: 'CLS-OS103-4',
-    code: 'OS103',
-    name: 'Operating Systems - Deadlock Prevention & Linux Internals',
-    professorId: 'PROF-103',
-    professorName: 'Dr. Marcus Chen',
-    room: 'Lab 2A',
-    time: '02:30 PM - 03:45 PM',
-    periodName: 'Period 4',
-    status: 'locked',
-    order: 4,
-    totalEnrolled: 5,
-    sessionDate: 'Today',
-    creditHours: 4,
-    color: '#34d399',
-    isStudentDaily: false,
-    description: 'Banker algorithm, priority inversion, real-time scheduler, and eBPF tracing.',
-  },
-];
-
-// Initial Subject Stats for default student Koshin
-export const INITIAL_SUBJECT_STATS = [
-  {
-    code: 'APP101',
-    name: 'Advanced Programming and Practice',
-    attended: 28,
-    total: 30, // 93.3%
-    professor: 'Dr. Robert Vance',
-    color: '#4F46E5',
-  },
-  {
-    code: 'DSA102',
+    id: 'CLS-DSA101-1',
+    code: 'DSA101',
     name: 'Data Structures and Algorithms',
-    attended: 26,
-    total: 32, // 81.3%
-    professor: 'Dr. Elena Rostova',
-    color: '#0284c7',
+    professorId: 'FAC-001',
+    professorName: 'Dr. Rajesh Sharma',
+    room: 'Lab 201 (Computing Wing)',
+    time: '09:00 AM - 10:15 AM',
+    periodName: 'Period 1',
+    status: 'ready', // 'ready' | 'live' | 'completed' | 'locked'
+    order: 1,
+    totalEnrolled: 5,
+    sessionDate: 'Today',
+    creditHours: 4,
+    color: '#2563EB',
+    isStudentDaily: true,
+    studentPeriodOrder: 1,
+    description: 'Binary trees, balanced AVL/Red-Black trees, graph traversals, and asymptotic complexity.',
   },
   {
-    code: 'OS103',
+    id: 'CLS-OS102-1',
+    code: 'OS102',
     name: 'Operating Systems',
-    attended: 18,
-    total: 27, // 66.7% (<75% - Warning)
-    professor: 'Dr. Marcus Chen',
-    color: '#DC2626',
+    professorId: 'FAC-002',
+    professorName: 'Prof. Meera Nair',
+    room: 'Hall 102 (Systems Complex)',
+    time: '10:30 AM - 11:45 AM',
+    periodName: 'Period 2',
+    status: 'ready',
+    order: 2,
+    totalEnrolled: 5,
+    sessionDate: 'Today',
+    creditHours: 4,
+    color: '#059669',
+    isStudentDaily: true,
+    studentPeriodOrder: 2,
+    description: 'POSIX process synchronization, mutex locks, semaphores, deadlock avoidance, and virtual memory.',
+  },
+  {
+    id: 'CLS-DBMS103-1',
+    code: 'DBMS103',
+    name: 'Database Management Systems',
+    professorId: 'FAC-002',
+    professorName: 'Prof. Meera Nair',
+    room: 'Hall 305 (Database Lab)',
+    time: '01:00 PM - 02:15 PM',
+    periodName: 'Period 3',
+    status: 'ready',
+    order: 3,
+    totalEnrolled: 5,
+    sessionDate: 'Today',
+    creditHours: 3,
+    color: '#7C3AED',
+    isStudentDaily: true,
+    studentPeriodOrder: 3,
+    description: 'Relational algebra, normalization (3NF/BCNF), B+ tree indexing, transaction ACID, and SQL query optimization.',
   },
 ];
 
-// Initial check-in records for today's live class
+// Initial attendance check-in records for today (starts completely empty)
 export const INITIAL_ATTENDANCE_RECORDS = [];
 
-// Notifications in student portal are ONLY sent by staff (empty initially)
+// Initial teacher-to-student notifications (starts empty)
 export const INITIAL_NOTIFICATIONS = [];
-

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAttendance } from '../../context/AttendanceContext';
 import { ClassQrPresentationModal } from './ClassQrPresentationModal';
@@ -20,6 +20,10 @@ import {
   Lock,
   ChevronRight,
   RotateCcw,
+  MessageSquare,
+  X,
+  Eye,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 export const TeacherDashboard = () => {
@@ -41,6 +45,8 @@ export const TeacherDashboard = () => {
     markAllStudentsPresent,
     markAllStudentsAbsent,
     clearSessionAttendance,
+    allStudents,
+    subjects,
   } = useAttendance();
 
   const [activeModalClassId, setActiveModalClassId] = useState(null);
@@ -49,6 +55,16 @@ export const TeacherDashboard = () => {
   const [remindedStudents, setRemindedStudents] = useState({});
   const [toastMessage, setToastMessage] = useState('');
   const [countdown, setCountdown] = useState(20);
+
+  // Notification modal for low attendance warnings
+  const [noticeModal, setNoticeModal] = useState({
+    isOpen: false,
+    student: null,
+    subjectCode: '',
+    subjectName: '',
+    percentage: '',
+    message: '',
+  });
 
   const activeClass = currentTeacherClass || teacherClasses[0];
   const isClassLive = activeClass?.status === 'live';
@@ -84,7 +100,7 @@ export const TeacherDashboard = () => {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  // Complete Class Session (ends this session & unlocks the next class!)
+  // Complete Class Session (ends this session & unlocks the next class)
   const handleCompleteClass = () => {
     if (!activeClass) return;
     const res = completeClassSession(activeClass.id);
@@ -98,7 +114,7 @@ export const TeacherDashboard = () => {
     setTimeout(() => setToastMessage(''), 4500);
   };
 
-  // Restart Classes Schedule (Reset all sessions back to Class 1 ready so staff can restart after completing all classes)
+  // Restart Classes Schedule
   const handleRestartClasses = () => {
     const res = restartTeacherClasses();
     if (res?.message) {
@@ -107,33 +123,8 @@ export const TeacherDashboard = () => {
     }
   };
 
-
-
-  // Send single student reminder
-  const handleSendReminder = (student) => {
-    const res = sendStudentReminder(student.id);
-    if (res?.success) {
-      setRemindedStudents((prev) => ({ ...prev, [student.id]: true }));
-      setToastMessage(res.message);
-      setTimeout(() => setToastMessage(''), 3500);
-    }
-  };
-
-  // Bulk remind all students below 75%
-  const handleBulkRemindAll = () => {
-    const below75List = teacherSubjectStudents.filter((s) => s.isBelow75);
-    below75List.forEach((stu) => {
-      sendStudentReminder(stu.id);
-    });
-    const newReminded = {};
-    below75List.forEach((s) => (newReminded[s.id] = true));
-    setRemindedStudents((prev) => ({ ...prev, ...newReminded }));
-    setToastMessage(`Official shortage notices sent to all ${below75List.length} students below 75%!`);
-    setTimeout(() => setToastMessage(''), 4000);
-  };
-
   // Present records strictly for active class session today, deduplicated per student
-  const classRecordsToday = React.useMemo(() => {
+  const classRecordsToday = useMemo(() => {
     if (!activeClass?.id) return [];
     const seen = new Set();
     return attendanceRecords.filter((r) => {
@@ -145,7 +136,117 @@ export const TeacherDashboard = () => {
     });
   }, [attendanceRecords, activeClass?.id]);
 
-  // Filter students
+  // Live Student Attendance Register calculation for activeClass
+  const activeClassRecords = useMemo(() => {
+    if (!activeClass?.id) return [];
+    return attendanceRecords.filter((r) => r.classId === activeClass.id);
+  }, [attendanceRecords, activeClass?.id]);
+
+  const studentRegisterRows = useMemo(() => {
+    const baseList = teacherSubjectStudents && teacherSubjectStudents.length > 0
+      ? teacherSubjectStudents
+      : (allStudents || []);
+
+    return baseList.map((stu) => {
+      const stuId = (stu.id || '').toLowerCase();
+      const stuRoll = (stu.rollNo || stu.roll_no || '').toLowerCase();
+      const rec = activeClassRecords.find((r) => {
+        const rStuId = (r.studentId || '').toLowerCase();
+        const rRoll = (r.rollNo || '').toLowerCase();
+        return rStuId === stuId || rRoll === stuRoll || rStuId === stuRoll || rRoll === stuId;
+      });
+      const status = rec ? rec.status : 'pending'; // 'present' | 'absent' | 'pending'
+      return {
+        student: stu,
+        record: rec,
+        status,
+      };
+    });
+  }, [teacherSubjectStudents, allStudents, activeClassRecords]);
+
+  const presentCount = studentRegisterRows.filter((r) => r.status === 'present').length;
+  const absentCount = studentRegisterRows.filter((r) => r.status === 'absent').length;
+  const pendingCount = studentRegisterRows.filter((r) => r.status === 'pending').length;
+  const isRegisterAllDone = (presentCount + absentCount === studentRegisterRows.length) && studentRegisterRows.length > 0;
+
+  // Low Attendance Alerts across subjects assigned to this faculty (<75%)
+  const assignedCodes = useMemo(() => {
+    return Array.isArray(currentProfessor?.assignedSubjects) && currentProfessor.assignedSubjects.length > 0
+      ? currentProfessor.assignedSubjects
+      : [currentProfessor?.subjectCode || 'DSA101'];
+  }, [currentProfessor]);
+
+  const lowAttendanceAlerts = useMemo(() => {
+    const list = [];
+    const studentList = allStudents && allStudents.length > 0 ? allStudents : teacherSubjectStudents;
+    (studentList || []).forEach((stu) => {
+      assignedCodes.forEach((code) => {
+        const subInfo = (subjects || []).find((s) => s.code === code) || {
+          code,
+          name: code === 'DSA101' ? 'Data Structures and Algorithms' : code === 'OS102' ? 'Operating Systems' : 'Database Management Systems',
+        };
+        const att = stu.attendance?.[code] || { attended: 0, total: 30 };
+        const pct = att.total > 0 ? ((att.attended / att.total) * 100).toFixed(1) : '0.0';
+        if (parseFloat(pct) < 75) {
+          list.push({
+            studentId: stu.id,
+            studentName: stu.name,
+            rollNo: stu.rollNo,
+            email: stu.email,
+            subjectCode: code,
+            subjectName: subInfo.name,
+            percentage: pct,
+            attended: att.attended,
+            total: att.total,
+          });
+        }
+      });
+    });
+    return list;
+  }, [allStudents, teacherSubjectStudents, assignedCodes, subjects]);
+
+  // Open Notice Modal for student
+  const handleOpenNoticeModal = (alert) => {
+    const defaultMsg = `Your attendance in ${alert.subjectName} has fallen below 75%. Please attend upcoming classes regularly to improve your attendance.`;
+    setNoticeModal({
+      isOpen: true,
+      student: { id: alert.studentId, name: alert.studentName, rollNo: alert.rollNo },
+      subjectCode: alert.subjectCode,
+      subjectName: alert.subjectName,
+      percentage: alert.percentage,
+      message: defaultMsg,
+    });
+  };
+
+  // Send Custom / Predefined Notice
+  const handleSendCustomNotice = () => {
+    if (!noticeModal.student) return;
+    const res = sendStudentReminder(noticeModal.student.id, noticeModal.message, noticeModal.subjectCode);
+    if (res?.success) {
+      setRemindedStudents((prev) => ({
+        ...prev,
+        [`${noticeModal.student.id}-${noticeModal.subjectCode}`]: true,
+      }));
+      setToastMessage(res.message);
+      setNoticeModal({ isOpen: false, student: null, subjectCode: '', subjectName: '', percentage: '', message: '' });
+      setTimeout(() => setToastMessage(''), 4000);
+    }
+  };
+
+  // Bulk remind all flagged students
+  const handleBulkRemindAll = () => {
+    lowAttendanceAlerts.forEach((alert) => {
+      const defaultMsg = `Your attendance in ${alert.subjectName} has fallen below 75%. Please attend upcoming classes regularly to improve your attendance.`;
+      sendStudentReminder(alert.studentId, defaultMsg, alert.subjectCode);
+    });
+    const newReminded = {};
+    lowAttendanceAlerts.forEach((a) => (newReminded[`${a.studentId}-${a.subjectCode}`] = true));
+    setRemindedStudents((prev) => ({ ...prev, ...newReminded }));
+    setToastMessage(`Official shortage notices sent to all ${lowAttendanceAlerts.length} flagged student cases!`);
+    setTimeout(() => setToastMessage(''), 4000);
+  };
+
+  // Filter students for overall roster table
   const filteredStudents = teacherSubjectStudents.filter((stu) => {
     const matchesSearch =
       stu.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -162,7 +263,7 @@ export const TeacherDashboard = () => {
   const qrPayload = activeClass ? getQrPayload(activeClass.id) : currentProfessor.subjectCode;
 
   return (
-    <div className="teacher-dashboard animate-fade-in">
+    <div className="teacher-dashboard animate-fade-in" style={{ paddingBottom: '3rem' }}>
       {/* Toast Notice */}
       {toastMessage && (
         <div
@@ -175,7 +276,7 @@ export const TeacherDashboard = () => {
             background: '#10b981',
             color: '#FFFFFF',
             borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-lg)',
+            boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)',
             fontSize: '0.88rem',
             fontWeight: 600,
             display: 'flex',
@@ -189,16 +290,16 @@ export const TeacherDashboard = () => {
         </div>
       )}
 
-      {/* 1. TODAY'S CLASSES OF CURRENT TEACHER (Sequential Unlock & Selection) */}
+      {/* 1. TODAY'S CLASSES OF CURRENT TEACHER */}
       <div style={{ marginBottom: '2rem' }}>
         <div className="section-header" style={{ marginBottom: '1rem' }}>
           <div>
             <h2 className="section-title">
               <Calendar size={20} style={{ color: 'var(--primary)' }} />
-              Today's Classes Schedule (4 Classes for Staff)
+              Today's Scheduled Classes ({teacherClasses.length} Assigned)
             </h2>
             <div className="section-subtitle">
-              Daily schedule of 4 sequential class sessions today. Activate a class to show its QR code; completing a class unlocks the next session.
+              Manage class sessions, launch QR code generation, track attendance in real-time, and mark students manually.
             </div>
           </div>
 
@@ -233,7 +334,7 @@ export const TeacherDashboard = () => {
                 borderColor: '#C7D2FE',
                 cursor: 'pointer',
               }}
-              title="Reset and restart all 4 class sessions for today"
+              title="Reset and restart all class sessions for today"
             >
               <RotateCcw size={14} />
               Reset & Restart Classes
@@ -241,7 +342,7 @@ export const TeacherDashboard = () => {
           </div>
         </div>
 
-        {/* Banner shown when all 4 classes are completed */}
+        {/* Banner shown when all assigned classes are completed */}
         {completedCount === teacherClasses.length && (
           <div
             style={{
@@ -278,10 +379,10 @@ export const TeacherDashboard = () => {
               </div>
               <div>
                 <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#065F46' }}>
-                  All 4 Class Sessions Completed! 🎉
+                  All Scheduled Classes Completed! 🎉
                 </div>
                 <div style={{ fontSize: '0.84rem', color: '#047857', marginTop: '0.15rem' }}>
-                  You have successfully conducted and completed all scheduled classes for today. You can restart the schedule to launch a new class cycle.
+                  You have successfully completed all scheduled sessions for today. You can restart the schedule to launch a new cycle.
                 </div>
               </div>
             </div>
@@ -304,7 +405,7 @@ export const TeacherDashboard = () => {
           </div>
         )}
 
-        {/* Classes Grid */}
+        {/* Classes Grid: Prompt 5.B (Cards with Required Controls) */}
         <div
           style={{
             display: 'grid',
@@ -322,18 +423,9 @@ export const TeacherDashboard = () => {
             return (
               <div
                 key={cls.id}
-                onClick={() => {
-                  if (!isLocked) {
-                    selectTeacherClass(cls.id);
-                  } else {
-                    setToastMessage(`🔒 Session ${cls.order} is locked. Complete the previous class session first.`);
-                    setTimeout(() => setToastMessage(''), 3500);
-                  }
-                }}
                 className={`glass-panel ${!isLocked ? 'glow-hover' : ''}`}
                 style={{
                   padding: '1.25rem',
-                  cursor: isLocked ? 'not-allowed' : 'pointer',
                   opacity: isLocked ? 0.6 : 1,
                   border: isSelected
                     ? '2px solid var(--primary)'
@@ -344,7 +436,6 @@ export const TeacherDashboard = () => {
                     ? 'linear-gradient(135deg, rgba(79, 70, 229, 0.05), #FFFFFF)'
                     : '#FFFFFF',
                   boxShadow: isSelected ? '0 4px 18px rgba(79, 70, 229, 0.15)' : 'var(--shadow-sm)',
-                  position: 'relative',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
@@ -368,7 +459,7 @@ export const TeacherDashboard = () => {
                         letterSpacing: '0.03em',
                       }}
                     >
-                      Session {cls.order || idx + 1} of 4 ({cls.periodName || `Period ${idx + 1}`})
+                      Class {cls.order || idx + 1} of {teacherClasses.length} ({cls.periodName || `Period ${idx + 1}`})
                     </span>
 
                     {/* Status Badge */}
@@ -401,7 +492,7 @@ export const TeacherDashboard = () => {
                   </div>
 
                   <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
-                    {cls.name}
+                    {cls.name} ({cls.code})
                   </h3>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -413,30 +504,116 @@ export const TeacherDashboard = () => {
                       <MapPin size={13} style={{ color: 'var(--accent-amber)' }} />
                       <span>{cls.room}</span>
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Users size={13} style={{ color: '#059669' }} />
+                      <span style={{ fontWeight: 600, color: '#059669' }}>
+                        {cls.totalEnrolled || 5} Students Enrolled
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Bottom Card Footer */}
+                {/* Card Action Buttons (Prompt 5.B Required Controls) */}
                 <div
                   style={{
                     borderTop: '1px solid var(--border-subtle)',
-                    paddingTop: '0.75rem',
+                    paddingTop: '0.85rem',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontSize: '0.78rem',
+                    gap: '0.45rem',
+                    flexWrap: 'wrap',
                   }}
                 >
-                  <span style={{ color: 'var(--text-dim)' }}>
-                    {isLocked
-                      ? `Locked (Unlock after Session ${(cls.order || 2) - 1})`
-                      : isSelected
-                      ? '● Selected Class'
-                      : 'Click to View / Conduct'}
-                  </span>
-                  {!isLocked && (
-                    <ChevronRight size={16} style={{ color: isSelected ? 'var(--primary)' : 'var(--text-dim)' }} />
-                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      selectTeacherClass(cls.id);
+                      handleOpenClassQr(cls.id);
+                    }}
+                    style={{
+                      flex: 1,
+                      minWidth: '95px',
+                      padding: '0.4rem 0.5rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      background: '#2563EB',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.3rem',
+                    }}
+                    title="Generate and display QR code for this class session"
+                  >
+                    <QrCode size={13} />
+                    Generate QR
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      selectTeacherClass(cls.id);
+                      setToastMessage(`Showing live attendance register for ${cls.name}`);
+                      setTimeout(() => setToastMessage(''), 3000);
+                    }}
+                    style={{
+                      flex: 1,
+                      minWidth: '95px',
+                      padding: '0.4rem 0.5rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      background: isSelected ? '#EEF2FF' : '#FFFFFF',
+                      color: '#4F46E5',
+                      border: '1px solid #C7D2FE',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.3rem',
+                    }}
+                    title="View attendance register for this class session"
+                  >
+                    <Eye size={13} />
+                    View Register
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      selectTeacherClass(cls.id);
+                      const el = document.getElementById('attendance-register-section');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      setToastMessage(`Manual attendance controls ready for ${cls.name}`);
+                      setTimeout(() => setToastMessage(''), 3000);
+                    }}
+                    style={{
+                      flex: 1,
+                      minWidth: '100px',
+                      padding: '0.4rem 0.5rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      background: '#F8FAFC',
+                      color: '#334155',
+                      border: '1px solid #CBD5E1',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.3rem',
+                    }}
+                    title="Mark attendance manually for this class session"
+                  >
+                    <SlidersHorizontal size={13} />
+                    Manual Marks
+                  </button>
                 </div>
               </div>
             );
@@ -447,26 +624,28 @@ export const TeacherDashboard = () => {
       {/* 2. SELECTED CLASS INTERACTIVE ATTENDANCE & QR CONTROLLER */}
       {activeClass && (
         <div
+          id="attendance-register-section"
           className="glass-panel"
           style={{
-            padding: '2rem',
-            border: isClassLive
-              ? '2px solid #10b981'
-              : isClassCompleted
-              ? '1px solid #10b981'
-              : '1px solid var(--border-subtle)',
-            background: isClassLive
-              ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.05), #FFFFFF)'
-              : '#FFFFFF',
-            borderRadius: 'var(--radius-xl)',
+            padding: '1.75rem',
             marginBottom: '2rem',
-            boxShadow: 'var(--shadow-md)',
+            border: isClassLive ? '2px solid #10b981' : '1px solid var(--border-subtle)',
+            boxShadow: isClassLive ? '0 10px 30px rgba(16, 185, 129, 0.15)' : 'var(--shadow-md)',
           }}
         >
-          <div className="teacher-active-session-grid">
-            {/* Left Details */}
+          {/* Header of Active Class Box */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              marginBottom: '1.5rem',
+              flexWrap: 'wrap',
+              gap: '1rem',
+            }}
+          >
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.65rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.35rem' }}>
                 <span
                   style={{
                     fontSize: '0.74rem',
@@ -475,85 +654,120 @@ export const TeacherDashboard = () => {
                     borderRadius: 'var(--radius-full)',
                     background: '#EEF2FF',
                     color: '#4F46E5',
-                    border: '1px solid #C7D2FE',
-                    textTransform: 'uppercase',
                   }}
                 >
-                  Selected Class • Session {activeClass.order || 1}
+                  Active Session: Class {activeClass.order || 1} of {teacherClasses.length}
                 </span>
 
                 {isClassLive && (
                   <span className="status-pill live pulse-badge">
-                    <Radio size={13} />
-                    Class Active (Attendance QR Live)
+                    <Radio size={12} />
+                    Attendance Open (Live)
                   </span>
                 )}
                 {isClassCompleted && (
                   <span className="status-pill present">
-                    <CheckCircle2 size={13} />
-                    Class Session Completed
+                    <Check size={12} />
+                    Class Completed
                   </span>
                 )}
                 {isClassReady && !isClassLive && (
                   <span className="status-pill upcoming">
-                    Ready to Activate QR
+                    Ready to Activate
                   </span>
                 )}
               </div>
 
-              <h1 style={{ fontSize: '1.85rem', color: 'var(--text-main)', marginBottom: '0.45rem' }}>
-                {activeClass.name}
-              </h1>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                {activeClass.name} ({activeClass.code})
+              </h2>
 
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: '580px', marginBottom: '1.25rem' }}>
-                {activeClass.description}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                <span>Scheduled: <strong>{activeClass.time}</strong></span>
+                <span>•</span>
+                <span>Room: <strong>{activeClass.room}</strong></span>
+                <span>•</span>
+                <span>Faculty: <strong>{activeClass.professorName}</strong></span>
+              </div>
+            </div>
+
+            {/* Turnout Pill */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                padding: '0.45rem 0.95rem',
+                background: '#FFFFFF',
+                borderRadius: 'var(--radius-full)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-sm)',
+              }}
+            >
+              <Users size={16} style={{ color: '#059669' }} />
+              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                {presentCount} of {studentRegisterRows.length} Present
+              </span>
+            </div>
+          </div>
+
+          {/* Interactive QR Generation & Action Controls */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '1.5rem',
+              alignItems: 'center',
+            }}
+          >
+            {/* Left Column: Instructions and Status */}
+            <div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+                Classroom Attendance Management
+              </h3>
+              <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
+                {isClassLive
+                  ? 'Students can now scan this QR code using their UniTrack mobile or laptop camera to mark attendance.'
+                  : isClassCompleted
+                  ? 'This class session has been completed and finalized. All student records are locked and saved.'
+                  : 'Click "Activate Class QR Code" below to generate a live, rolling attendance token for students in the hall.'}
               </p>
 
-              {/* Lecture Specs */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
-                <div className="detail-item">
-                  <Clock size={16} style={{ color: 'var(--primary)' }} />
-                  <span>Time: <strong style={{ color: 'var(--text-main)' }}>{activeClass.time}</strong></span>
-                </div>
-                <div className="detail-item">
-                  <MapPin size={16} style={{ color: 'var(--accent-amber)' }} />
-                  <span>Room: <strong style={{ color: 'var(--text-main)' }}>{activeClass.room}</strong></span>
-                </div>
-                <div className="detail-item">
-                  <Users size={16} style={{ color: '#059669' }} />
-                  <span>Roster: <strong style={{ color: 'var(--text-main)' }}>{teacherSubjectStudents.length} Students</strong></span>
-                </div>
-              </div>
-
-              {/* Class Actions */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
-                {/* Activate QR Button (if not yet live) */}
-                {!isClassLive && !isClassCompleted && (
+              {/* Action Buttons */}
+              <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                {/* If Ready */}
+                {isClassReady && !isClassLive && (
                   <button
                     onClick={handleActivateClass}
                     className="btn-primary"
-                    style={{ padding: '0.75rem 1.5rem', fontSize: '0.92rem' }}
+                    style={{
+                      padding: '0.75rem 1.4rem',
+                      fontSize: '0.92rem',
+                      background: '#10B981',
+                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                    }}
                   >
                     <QrCode size={18} />
                     Activate Class QR Code
                   </button>
                 )}
 
-                {/* If Live: Complete Class Button (Ends session & unlocks next class) */}
+                {/* If Live */}
                 {isClassLive && (
                   <>
                     <button
                       onClick={handleCompleteClass}
                       className="btn-primary"
                       style={{
-                        padding: '0.75rem 1.5rem',
+                        padding: '0.75rem 1.4rem',
                         fontSize: '0.92rem',
                         background: '#DC2626',
+                        boxShadow: '0 4px 14px rgba(220, 38, 38, 0.35)',
                       }}
-                      title="End this session and unlock the next scheduled class"
+                      title="End this session and close attendance"
                     >
                       <Power size={17} />
-                      Complete & End Class Session
+                      Complete & Close Attendance
                     </button>
 
                     <button
@@ -585,7 +799,7 @@ export const TeacherDashboard = () => {
                       }}
                     >
                       <CheckCircle2 size={18} />
-                      <span>Session Completed. Attendance has been logged. Next class is unlocked!</span>
+                      <span>Session Closed & Finalized.</span>
                     </div>
 
                     <button
@@ -594,18 +808,14 @@ export const TeacherDashboard = () => {
                       style={{
                         padding: '0.65rem 1.15rem',
                         fontSize: '0.86rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.45rem',
                         color: '#059669',
                         borderColor: '#A7F3D0',
                         background: '#ECFDF5',
                         cursor: 'pointer',
                       }}
-                      title="Reset and restart all 4 classes schedule"
                     >
                       <RotateCcw size={15} />
-                      Restart All Classes
+                      Restart Schedule
                     </button>
                   </div>
                 )}
@@ -651,9 +861,9 @@ export const TeacherDashboard = () => {
                 </div>
                 <div style={{ fontSize: '0.76rem', color: isClassLive ? '#059669' : 'var(--text-muted)', fontWeight: 600 }}>
                   {isClassLive
-                    ? `🟢 ACTIVE • Rotating Token (${countdown}s)`
+                    ? `🟢 ACTIVE • Rolling Token (${countdown}s)`
                     : isClassCompleted
-                    ? '✓ Session Completed'
+                    ? '✓ Session Finalized'
                     : '⚪ Click Activate to Launch QR'}
                 </div>
               </div>
@@ -675,16 +885,16 @@ export const TeacherDashboard = () => {
               >
                 <span style={{ color: 'var(--text-muted)' }}>Session Turnout:</span>
                 <strong style={{ color: '#059669', fontSize: '0.82rem' }}>
-                  {classRecordsToday.length} of {teacherSubjectStudents.length} Present
+                  {presentCount} of {studentRegisterRows.length} Present
                 </strong>
               </div>
             </div>
           </div>
 
-          {/* Live Scanned Students Section (Who Scanned & Marked Attendance) */}
+          {/* Prompt 5.D & 5.E: LIVE STUDENT ATTENDANCE REGISTER */}
           <div
             style={{
-              marginTop: '1.75rem',
+              marginTop: '2rem',
               borderTop: '1px solid var(--border-subtle)',
               paddingTop: '1.5rem',
             }}
@@ -708,16 +918,18 @@ export const TeacherDashboard = () => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem',
+                    margin: 0,
                   }}
                 >
                   <CheckCircle2 size={18} style={{ color: '#059669' }} />
-                  Live Attendees Who Scanned & Marked Attendance
+                  Live Student Attendance Register
                 </h3>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Real-time verification feed of students who scanned the QR code for <strong>{activeClass.name} ({activeClass.code})</strong>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  Live student roster for <strong>{activeClass.name} ({activeClass.code})</strong>. Automatically updates when a student scans or when attendance is marked manually.
                 </div>
               </div>
 
+              {/* Live Count Summary (Prompt 5.D Requirement) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span
                   style={{
@@ -725,19 +937,41 @@ export const TeacherDashboard = () => {
                     fontWeight: 700,
                     padding: '0.25rem 0.65rem',
                     borderRadius: 'var(--radius-full)',
-                    background: classRecordsToday.length > 0 ? '#ECFDF5' : '#F3F4F6',
-                    color: classRecordsToday.length > 0 ? '#059669' : '#6B7280',
-                    border: classRecordsToday.length > 0 ? '1px solid #A7F3D0' : '1px solid #E5E7EB',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
+                    background: '#ECFDF5',
+                    color: '#059669',
+                    border: '1px solid #A7F3D0',
                   }}
                 >
-                  <Radio size={12} className={isClassLive ? 'pulse-badge' : ''} />
-                  {classRecordsToday.length} of {teacherSubjectStudents.length} Students Scanned
+                  Present: {presentCount}
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    padding: '0.25rem 0.65rem',
+                    borderRadius: 'var(--radius-full)',
+                    background: '#FEF2F2',
+                    color: '#DC2626',
+                    border: '1px solid #FECACA',
+                  }}
+                >
+                  Absent: {absentCount}
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    padding: '0.25rem 0.65rem',
+                    borderRadius: 'var(--radius-full)',
+                    background: '#FFFBEB',
+                    color: '#D97706',
+                    border: '1px solid #FDE68A',
+                  }}
+                >
+                  Pending: {pendingCount}
                 </span>
 
-                {classRecordsToday.length > 0 && (
+                {activeClassRecords.length > 0 && (
                   <button
                     type="button"
                     onClick={() => {
@@ -759,149 +993,211 @@ export const TeacherDashboard = () => {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.35rem',
-                      transition: 'all 0.15s ease',
                     }}
                     title="Clear attendee records for this class session"
                   >
                     <RotateCcw size={12} />
-                    Reset Attendees
+                    Reset Register
                   </button>
                 )}
               </div>
             </div>
 
-            {classRecordsToday.length === 0 ? (
+            {/* Prompt 5.E: All Students' Attendance Completed Banner */}
+            {isRegisterAllDone && (
               <div
                 style={{
-                  padding: '2rem 1.5rem',
-                  textAlign: 'center',
-                  background: '#F9FAFB',
-                  border: '1px dashed var(--border-light)',
-                  borderRadius: 'var(--radius-lg)',
-                  color: 'var(--text-muted)',
+                  marginBottom: '1rem',
+                  padding: '0.85rem 1.25rem',
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  borderRadius: 'var(--radius-md)',
+                  color: '#065F46',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  animation: 'popIn 0.3s ease',
                 }}
               >
-                <Users size={32} style={{ color: '#9CA3AF', margin: '0 auto 0.5rem', opacity: 0.7 }} />
-                <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.25rem' }}>
-                  Awaiting Student Scans...
-                </div>
-                <div style={{ fontSize: '0.8rem', maxWidth: '440px', margin: '0 auto' }}>
-                  {isClassLive
-                    ? 'The QR code is active! When students in the classroom scan the QR code with their camera, their names, roll numbers, and scan timestamps will appear here immediately.'
-                    : 'Click "Activate Class QR Code" above to project the QR code and begin taking attendance.'}
-                </div>
-              </div>
-            ) : (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                  gap: '0.85rem',
-                }}
-              >
-                {classRecordsToday.map((rec) => (
-                  <div
-                    key={rec.id}
-                    style={{
-                      padding: '0.85rem 1rem',
-                      background: '#FFFFFF',
-                      border: '1px solid #A7F3D0',
-                      borderRadius: 'var(--radius-md)',
-                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '0.75rem',
-                      animation: 'popIn 0.3s ease',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: '50%',
-                          background: '#ECFDF5',
-                          color: '#059669',
-                          border: '1px solid #A7F3D0',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: '0.88rem',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {rec.studentName?.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-main)' }}>
-                          {rec.studentName}
-                        </div>
-                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                          Roll: <strong style={{ color: 'var(--text-main)' }}>{rec.rollNo}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' }}>
-                      <div
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          padding: '0.15rem 0.45rem',
-                          borderRadius: 'var(--radius-full)',
-                          background: '#ECFDF5',
-                          color: '#059669',
-                        }}
-                      >
-                        <CheckCircle2 size={11} />
-                        Scanned
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Clock size={11} />
-                        {rec.timestamp}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (activeClass) {
-                            const res = markStudentAbsent(activeClass.id, {
-                              id: rec.studentId,
-                              rollNo: rec.rollNo,
-                              name: rec.studentName,
-                            });
-                            if (res?.message) setToastMessage(res.message);
-                            setTimeout(() => setToastMessage(''), 3000);
-                          }
-                        }}
-                        title="Mark Absent"
-                        style={{
-                          padding: '0.18rem 0.45rem',
-                          borderRadius: 'var(--radius-sm)',
-                          fontSize: '0.68rem',
-                          fontWeight: 700,
-                          background: '#FEF2F2',
-                          color: '#DC2626',
-                          border: '1px solid #FECACA',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Mark Absent
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                <CheckCircle2 size={18} style={{ color: '#059669' }} />
+                <span>All Students' Attendance Completed (5 of 5 Accounted For) 🎉</span>
               </div>
             )}
+
+            {/* Register Table (Prompt 5.D) */}
+            <div style={{ overflowX: 'auto', background: '#FFFFFF', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+              <table className="roster-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Student ID</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Student Name</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Attendance Status</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Marking Method</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Time Marked</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Manual Controls</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {studentRegisterRows.map(({ student, record, status }) => {
+                    const isPresent = status === 'present';
+                    const isAbsent = status === 'absent';
+                    const isPending = status === 'pending';
+
+                    return (
+                      <tr
+                        key={student.id}
+                        style={{
+                          borderBottom: '1px solid var(--border-subtle)',
+                          background: isPresent ? '#F0FDF4' : isAbsent ? '#FEF2F2' : 'transparent',
+                        }}
+                      >
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: 'var(--text-main)', fontSize: '0.84rem' }}>
+                          {student.rollNo || student.id}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div
+                              style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: '50%',
+                                background: isPresent ? '#DCFCE7' : isAbsent ? '#FEE2E2' : '#EEF2FF',
+                                color: isPresent ? '#059669' : isAbsent ? '#DC2626' : '#4F46E5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 700,
+                                fontSize: '0.78rem',
+                              }}
+                            >
+                              {student.name.charAt(0)}
+                            </div>
+                            <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.86rem' }}>
+                              {student.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          {isPresent && (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                padding: '0.2rem 0.55rem',
+                                borderRadius: '999px',
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                                background: '#DCFCE7',
+                                color: '#059669',
+                                border: '1px solid #A7F3D0',
+                              }}
+                            >
+                              <CheckCircle2 size={12} /> Present
+                            </span>
+                          )}
+                          {isAbsent && (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                padding: '0.2rem 0.55rem',
+                                borderRadius: '999px',
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                                background: '#FEE2E2',
+                                color: '#DC2626',
+                                border: '1px solid #FECACA',
+                              }}
+                            >
+                              <AlertTriangle size={12} /> Absent
+                            </span>
+                          )}
+                          {isPending && (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                padding: '0.2rem 0.55rem',
+                                borderRadius: '999px',
+                                fontSize: '0.74rem',
+                                fontWeight: 600,
+                                background: '#FEF3C7',
+                                color: '#D97706',
+                                border: '1px solid #FDE68A',
+                              }}
+                            >
+                              <Clock size={12} /> Pending
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          {record ? (record.method === 'QR_SCAN' ? 'QR Scan' : 'Manual') : '—'}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          {record?.timestamp || '—'}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const res = markStudentPresent(activeClass.id, student);
+                                if (res?.message) setToastMessage(res.message);
+                                setTimeout(() => setToastMessage(''), 3000);
+                              }}
+                              style={{
+                                padding: '0.25rem 0.6rem',
+                                borderRadius: 'var(--radius-sm)',
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                                background: isPresent ? '#059669' : '#ECFDF5',
+                                color: isPresent ? '#FFFFFF' : '#059669',
+                                border: '1px solid #A7F3D0',
+                                cursor: 'pointer',
+                              }}
+                              title="Mark Present manually"
+                            >
+                              Present
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const res = markStudentAbsent(activeClass.id, student);
+                                if (res?.message) setToastMessage(res.message);
+                                setTimeout(() => setToastMessage(''), 3000);
+                              }}
+                              style={{
+                                padding: '0.25rem 0.6rem',
+                                borderRadius: 'var(--radius-sm)',
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                                background: isAbsent ? '#DC2626' : '#FEF2F2',
+                                color: isAbsent ? '#FFFFFF' : '#DC2626',
+                                border: '1px solid #FECACA',
+                                cursor: 'pointer',
+                              }}
+                              title="Mark Absent manually"
+                            >
+                              Absent
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
-      {/* 3. METRICS CARDS (Assigned Subject Card removed as requested) */}
+      {/* 3. METRICS CARDS */}
       <div
         style={{
           display: 'grid',
@@ -913,7 +1209,7 @@ export const TeacherDashboard = () => {
         <div className="glass-panel" style={{ padding: '1.25rem' }}>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Total Enrolled Students</div>
           <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#4F46E5', marginTop: '0.2rem' }}>
-            {teacherSubjectStudents.length} Students
+            {studentRegisterRows.length} Students
           </div>
           <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 600 }}>
             {eligibleCount} eligible for exams (≥75%)
@@ -924,19 +1220,19 @@ export const TeacherDashboard = () => {
           className="glass-panel"
           style={{
             padding: '1.25rem',
-            border: below75Count > 0 ? '1px solid #FECACA' : 'var(--border-subtle)',
-            background: below75Count > 0 ? '#FEF2F2' : '#FFFFFF',
+            border: lowAttendanceAlerts.length > 0 ? '1px solid #FECACA' : 'var(--border-subtle)',
+            background: lowAttendanceAlerts.length > 0 ? '#FEF2F2' : '#FFFFFF',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: '0.78rem', color: '#DC2626', fontWeight: 600 }}>Students Below 75% Threshold</div>
+            <div style={{ fontSize: '0.78rem', color: '#DC2626', fontWeight: 600 }}>Low Attendance Cases (&lt;75%)</div>
             <AlertTriangle size={16} style={{ color: '#DC2626' }} />
           </div>
           <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#DC2626', marginTop: '0.2rem' }}>
-            {below75Count} Students
+            {lowAttendanceAlerts.length} Flagged
           </div>
           <div style={{ fontSize: '0.74rem', color: '#B91C1C' }}>
-            Marked in RED • Send shortage notifications below
+            Calculated dynamically from live attendance records
           </div>
         </div>
 
@@ -951,17 +1247,186 @@ export const TeacherDashboard = () => {
         </div>
 
         <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Active Session Attendance Rate</div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Active Session Turnout Rate</div>
           <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#059669', marginTop: '0.2rem' }}>
-            {((classRecordsToday.length / Math.max(1, teacherSubjectStudents.length)) * 100).toFixed(0)}%
+            {((presentCount / Math.max(1, studentRegisterRows.length)) * 100).toFixed(0)}%
           </div>
           <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
-            {classRecordsToday.length} verified attendees in session
+            {presentCount} verified present in this session
           </div>
         </div>
       </div>
 
-      {/* 4. STUDENTS ATTENDANCE ROSTER TABLE WITH LOW ATTENDANCE NOTIFICATION BUTTON */}
+      {/* 4. PROMPT 7: DEDICATED LOW ATTENDANCE ALERTS SECTION (<75%) */}
+      <div className="glass-panel" style={{ padding: '1.75rem', marginBottom: '2rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            marginBottom: '1.25rem',
+          }}
+        >
+          <div>
+            <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#DC2626' }}>
+              <AlertTriangle size={20} style={{ color: '#DC2626' }} />
+              Low Attendance Alerts (&lt; 75% Threshold)
+            </h2>
+            <div className="section-subtitle">
+              Students whose attendance in any assigned subject is below 75%. Send official warnings directly to their dashboard.
+            </div>
+          </div>
+
+          {lowAttendanceAlerts.length > 0 && (
+            <button
+              onClick={handleBulkRemindAll}
+              className="btn-primary"
+              style={{
+                fontSize: '0.8rem',
+                padding: '0.45rem 0.85rem',
+                background: '#DC2626',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+              title="Send warning notices to all flagged students"
+            >
+              <Send size={14} />
+              Notify All ({lowAttendanceAlerts.length}) Cases
+            </button>
+          )}
+        </div>
+
+        {lowAttendanceAlerts.length === 0 ? (
+          <div
+            style={{
+              padding: '2rem',
+              textAlign: 'center',
+              background: '#F0FDF4',
+              border: '1px solid #BBF7D0',
+              borderRadius: 'var(--radius-md)',
+              color: '#065F46',
+            }}
+          >
+            <CheckCircle2 size={32} style={{ color: '#059669', margin: '0 auto 0.5rem' }} />
+            <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>All Students Above 75% Threshold!</div>
+            <div style={{ fontSize: '0.82rem', marginTop: '0.2rem' }}>
+              No students are currently below the 75% mandatory examination attendance mark for your assigned subjects.
+            </div>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto', background: '#FFFFFF', borderRadius: 'var(--radius-md)', border: '1px solid #FECACA' }}>
+            <table className="roster-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#FEF2F2', borderBottom: '1px solid #FECACA' }}>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.78rem', color: '#991B1B' }}>Student Name & ID</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.78rem', color: '#991B1B' }}>Subject Name</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.78rem', color: '#991B1B' }}>Attendance Count</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.78rem', color: '#991B1B' }}>Percentage</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center', fontSize: '0.78rem', color: '#991B1B' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lowAttendanceAlerts.map((alert) => {
+                  const wasSent = remindedStudents[`${alert.studentId}-${alert.subjectCode}`];
+
+                  return (
+                    <tr
+                      key={`${alert.studentId}-${alert.subjectCode}`}
+                      style={{ borderBottom: '1px solid #FEE2E2', background: '#FFF5F5' }}
+                    >
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div
+                            style={{
+                              width: 30,
+                              height: 30,
+                              borderRadius: '50%',
+                              background: '#FEE2E2',
+                              color: '#DC2626',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                            }}
+                          >
+                            {alert.studentName.charAt(0)}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, color: '#991B1B', fontSize: '0.86rem' }}>
+                              {alert.studentName}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: '#B91C1C' }}>
+                              Roll: {alert.rollNo}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#0F172A', fontSize: '0.84rem' }}>
+                        {alert.subjectName} ({alert.subjectCode})
+                      </td>
+
+                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+                        <strong style={{ color: '#DC2626' }}>{alert.attended}</strong> / {alert.total} Classes
+                      </td>
+
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span
+                          style={{
+                            fontSize: '0.95rem',
+                            fontWeight: 800,
+                            color: '#DC2626',
+                            fontFamily: 'var(--font-heading)',
+                          }}
+                        >
+                          {alert.percentage}%
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenNoticeModal(alert)}
+                          className={wasSent ? 'btn-secondary' : 'btn-primary'}
+                          style={{
+                            padding: '0.35rem 0.75rem',
+                            fontSize: '0.76rem',
+                            background: wasSent ? '#ECFDF5' : '#DC2626',
+                            color: wasSent ? '#059669' : '#FFFFFF',
+                            border: wasSent ? '1px solid #A7F3D0' : 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {wasSent ? (
+                            <>
+                              <Check size={13} />
+                              Notice Sent
+                            </>
+                          ) : (
+                            <>
+                              <MessageSquare size={13} />
+                              Send Notification
+                            </>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* 5. ENROLLED STUDENTS FULL ROSTER TABLE */}
       <div className="glass-panel" style={{ padding: '1.75rem' }}>
         <div
           style={{
@@ -976,10 +1441,10 @@ export const TeacherDashboard = () => {
           <div>
             <h2 className="section-title">
               <Users size={20} style={{ color: 'var(--primary)' }} />
-              Enrolled Students Attendance Roster ({currentProfessor.subjectCode})
+              Enrolled Students Attendance Roster ({activeClass.code})
             </h2>
             <div className="section-subtitle">
-              Students below 75% are highlighted in red. Use the action button to send them low attendance warning notifications.
+              Complete subject attendance records and threshold status.
             </div>
           </div>
 
@@ -1000,81 +1465,56 @@ export const TeacherDashboard = () => {
               {filterBelow75Only ? 'Show All Students' : `Show Below 75% Only (${below75Count})`}
             </button>
 
-            {/* Staff Attendance Quick Controls & Bulk Remind */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-              {activeClass && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const res = markAllStudentsPresent(activeClass.id);
-                      if (res?.message) setToastMessage(res.message);
-                      setTimeout(() => setToastMessage(''), 3500);
-                    }}
-                    title="Mark all students Present for this active session"
-                    style={{
-                      fontSize: '0.78rem',
-                      padding: '0.42rem 0.75rem',
-                      background: '#ECFDF5',
-                      color: '#059669',
-                      border: '1px solid #A7F3D0',
-                      borderRadius: 'var(--radius-md)',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <CheckCircle2 size={13} />
-                    Mark All Present
-                  </button>
+            {/* Quick Bulk Actions */}
+            <button
+              type="button"
+              onClick={() => {
+                const res = markAllStudentsPresent(activeClass.id);
+                if (res?.message) setToastMessage(res.message);
+                setTimeout(() => setToastMessage(''), 3500);
+              }}
+              style={{
+                fontSize: '0.78rem',
+                padding: '0.42rem 0.75rem',
+                background: '#ECFDF5',
+                color: '#059669',
+                border: '1px solid #A7F3D0',
+                borderRadius: 'var(--radius-md)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
+              <CheckCircle2 size={13} />
+              Mark All Present
+            </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const res = markAllStudentsAbsent(activeClass.id);
-                      if (res?.message) setToastMessage(res.message);
-                      setTimeout(() => setToastMessage(''), 3500);
-                    }}
-                    title="Mark all students Absent for this active session"
-                    style={{
-                      fontSize: '0.78rem',
-                      padding: '0.42rem 0.75rem',
-                      background: '#FEF2F2',
-                      color: '#DC2626',
-                      border: '1px solid #FECACA',
-                      borderRadius: 'var(--radius-md)',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <AlertTriangle size={13} />
-                    Mark All Absent
-                  </button>
-                </>
-              )}
-
-              {/* Bulk Remind Button */}
-              {below75Count > 0 && (
-                <button
-                  onClick={handleBulkRemindAll}
-                  className="btn-primary"
-                  style={{
-                    fontSize: '0.8rem',
-                    padding: '0.45rem 0.85rem',
-                    background: '#DC2626',
-                  }}
-                  title="Send warning notifications to all students below 75%"
-                >
-                  <Send size={14} />
-                  Notify All ({below75Count}) Below 75%
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const res = markAllStudentsAbsent(activeClass.id);
+                if (res?.message) setToastMessage(res.message);
+                setTimeout(() => setToastMessage(''), 3500);
+              }}
+              style={{
+                fontSize: '0.78rem',
+                padding: '0.42rem 0.75rem',
+                background: '#FEF2F2',
+                color: '#DC2626',
+                border: '1px solid #FECACA',
+                borderRadius: 'var(--radius-md)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
+              <AlertTriangle size={13} />
+              Mark All Absent
+            </button>
 
             {/* Search Input */}
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -1110,13 +1550,19 @@ export const TeacherDashboard = () => {
                 <th>Subject Classes</th>
                 <th>Attendance %</th>
                 <th>Threshold Status</th>
-                <th style={{ textAlign: 'center' }}>Staff Action (Send Notification)</th>
               </tr>
             </thead>
             <tbody>
               {filteredStudents.map((stu) => {
                 const isRed = stu.isBelow75;
-                const wasReminded = remindedStudents[stu.id];
+                const stuId = (stu.id || '').toLowerCase();
+                const stuRoll = (stu.rollNo || stu.roll_no || '').toLowerCase();
+                const rec = activeClassRecords.find((r) => {
+                  const rStuId = (r.studentId || '').toLowerCase();
+                  const rRoll = (r.rollNo || '').toLowerCase();
+                  return rStuId === stuId || rRoll === stuRoll || rStuId === stuRoll || rRoll === stuId;
+                });
+                const isPresent = !!rec;
 
                 return (
                   <tr
@@ -1161,108 +1607,78 @@ export const TeacherDashboard = () => {
                       </div>
                     </td>
 
-                    {/* Active Session Scan Status & Staff Attendance Action */}
                     <td>
-                      {(() => {
-                        const stuId = (stu.id || '').toLowerCase();
-                        const stuRoll = (stu.rollNo || stu.roll_no || '').toLowerCase();
-                        const rec = classRecordsToday.find((r) => {
-                          const rStuId = (r.studentId || '').toLowerCase();
-                          const rRoll = (r.rollNo || '').toLowerCase();
-                          return rStuId === stuId || rRoll === stuRoll || rStuId === stuRoll || rRoll === stuId;
-                        });
-                        const isPresent = !!rec;
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {isPresent ? (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: 'var(--radius-full)',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              background: '#ECFDF5',
+                              color: '#059669',
+                              border: '1px solid #A7F3D0',
+                            }}
+                          >
+                            <CheckCircle2 size={12} />
+                            {rec.timestamp ? `Present (${rec.timestamp})` : 'Present ✓'}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
+                            ○ Pending / Not Scanned
+                          </span>
+                        )}
 
-                        return (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            {isPresent ? (
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.35rem',
-                                  padding: '0.2rem 0.55rem',
-                                  borderRadius: 'var(--radius-full)',
-                                  fontSize: '0.74rem',
-                                  fontWeight: 700,
-                                  background: '#ECFDF5',
-                                  color: '#059669',
-                                  border: '1px solid #A7F3D0',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                <CheckCircle2 size={12} />
-                                {rec.timestamp ? `Present (${rec.timestamp})` : 'Present ✓'}
-                              </span>
-                            ) : (
-                              <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
-                                ○ Absent / Not Scanned
-                              </span>
-                            )}
-
-                            {/* Dual Action Buttons for Staff */}
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                              {!isPresent ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (activeClass) {
-                                      const res = markStudentPresent(activeClass.id, stu);
-                                      if (res?.message) setToastMessage(res.message);
-                                      setTimeout(() => setToastMessage(''), 3500);
-                                    }
-                                  }}
-                                  title="Mark student Present (increases subject attendance %)"
-                                  style={{
-                                    padding: '0.22rem 0.55rem',
-                                    borderRadius: 'var(--radius-sm)',
-                                    fontSize: '0.72rem',
-                                    fontWeight: 700,
-                                    background: '#ECFDF5',
-                                    color: '#059669',
-                                    border: '1px solid #A7F3D0',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                  }}
-                                >
-                                  <CheckCircle2 size={11} />
-                                  Mark Present
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (activeClass) {
-                                      const res = markStudentAbsent(activeClass.id, stu);
-                                      if (res?.message) setToastMessage(res.message);
-                                      setTimeout(() => setToastMessage(''), 3500);
-                                    }
-                                  }}
-                                  title="Mark student Absent"
-                                  style={{
-                                    padding: '0.22rem 0.55rem',
-                                    borderRadius: 'var(--radius-sm)',
-                                    fontSize: '0.72rem',
-                                    fontWeight: 700,
-                                    background: '#FEF2F2',
-                                    color: '#DC2626',
-                                    border: '1px solid #FECACA',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                  }}
-                                >
-                                  <AlertTriangle size={11} />
-                                  Mark Absent
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })()}
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          {!isPresent ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const res = markStudentPresent(activeClass.id, stu);
+                                if (res?.message) setToastMessage(res.message);
+                                setTimeout(() => setToastMessage(''), 3000);
+                              }}
+                              style={{
+                                padding: '0.22rem 0.55rem',
+                                borderRadius: 'var(--radius-sm)',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                background: '#ECFDF5',
+                                color: '#059669',
+                                border: '1px solid #A7F3D0',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Present
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const res = markStudentAbsent(activeClass.id, stu);
+                                if (res?.message) setToastMessage(res.message);
+                                setTimeout(() => setToastMessage(''), 3000);
+                              }}
+                              style={{
+                                padding: '0.22rem 0.55rem',
+                                borderRadius: 'var(--radius-sm)',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                background: '#FEF2F2',
+                                color: '#DC2626',
+                                border: '1px solid #FECACA',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Absent
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </td>
 
                     <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
@@ -1292,7 +1708,7 @@ export const TeacherDashboard = () => {
                         >
                           <div
                             style={{
-                              width: `${Math.min(100, stu.percentage)}%`,
+                              width: `${Math.min(100, Math.max(5, stu.percentage))}%`,
                               height: '100%',
                               background: isRed ? '#DC2626' : '#059669',
                               borderRadius: 3,
@@ -1342,38 +1758,6 @@ export const TeacherDashboard = () => {
                         </span>
                       )}
                     </td>
-
-                    <td style={{ textAlign: 'center' }}>
-                      {isRed ? (
-                        <button
-                          onClick={() => handleSendReminder(stu)}
-                          className={wasReminded ? 'btn-secondary' : 'btn-primary'}
-                          style={{
-                            padding: '0.35rem 0.75rem',
-                            fontSize: '0.76rem',
-                            background: wasReminded ? '#ECFDF5' : '#DC2626',
-                            color: wasReminded ? '#059669' : '#FFFFFF',
-                            border: wasReminded ? '1px solid #A7F3D0' : 'none',
-                          }}
-                        >
-                          {wasReminded ? (
-                            <>
-                              <Check size={13} />
-                              Notice Sent
-                            </>
-                          ) : (
-                            <>
-                              <Send size={13} />
-                              Send Low Attendance Notice
-                            </>
-                          )}
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
-                          Eligible (No Action Needed)
-                        </span>
-                      )}
-                    </td>
                   </tr>
                 );
               })}
@@ -1382,13 +1766,160 @@ export const TeacherDashboard = () => {
         </div>
       </div>
 
-      {/* QR Presentation Modal */}
+      {/* Fullscreen QR Presentation Modal */}
       {activeClass && (
         <ClassQrPresentationModal
           isOpen={!!activeModalClassId}
           onClose={() => setActiveModalClassId(null)}
           classId={activeClass.id}
         />
+      )}
+
+      {/* PROMPT 7: Notification Custom/Predefined Message Modal */}
+      {noticeModal.isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            backgroundColor: 'rgba(15, 23, 42, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '1.75rem',
+              width: '100%',
+              maxWidth: '520px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid var(--border-subtle)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <MessageSquare size={18} style={{ color: '#2563EB' }} />
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
+                  Send Low Attendance Notice
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNoticeModal({ isOpen: false, student: null, subjectCode: '', subjectName: '', percentage: '', message: '' })}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Recipient Details */}
+            <div
+              style={{
+                padding: '0.85rem 1rem',
+                background: '#F8FAFC',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '8px',
+                marginBottom: '1rem',
+                fontSize: '0.84rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Recipient Student:</span>
+                <strong style={{ color: 'var(--text-main)' }}>
+                  {noticeModal.student?.name} ({noticeModal.student?.rollNo})
+                </strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Subject:</span>
+                <strong>{noticeModal.subjectName} ({noticeModal.subjectCode})</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Current Attendance:</span>
+                <strong style={{ color: '#DC2626' }}>{noticeModal.percentage}% (&lt; 75% Shortage)</strong>
+              </div>
+            </div>
+
+            {/* Predefined message templates quick selection */}
+            <div style={{ marginBottom: '0.85rem' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
+                Select Predefined Message Template:
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                {[
+                  `Your attendance in ${noticeModal.subjectName} has fallen below 75%. Please attend upcoming classes regularly to improve your attendance.`,
+                  `Attendance Warning: You have ${noticeModal.percentage}% in ${noticeModal.subjectName}. Meet faculty in room ${activeClass.room} to discuss shortage.`,
+                  `Urgent: Your attendance in ${noticeModal.subjectName} (${noticeModal.subjectCode}) is currently ${noticeModal.percentage}%. Minimum 75% required for university examinations.`,
+                ].map((tmpl, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setNoticeModal((prev) => ({ ...prev, message: tmpl }))}
+                    style={{
+                      textAlign: 'left',
+                      padding: '0.45rem 0.65rem',
+                      fontSize: '0.76rem',
+                      background: noticeModal.message === tmpl ? '#EFF6FF' : '#FFFFFF',
+                      border: noticeModal.message === tmpl ? '1px solid #2563EB' : '1px solid var(--border-subtle)',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      color: noticeModal.message === tmpl ? '#1E40AF' : 'var(--text-main)',
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    Template {idx + 1}: "{tmpl.substring(0, 75)}..."
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Message Textarea */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
+                Message to Student (Editable):
+              </label>
+              <textarea
+                rows={3}
+                value={noticeModal.message}
+                onChange={(e) => setNoticeModal((prev) => ({ ...prev, message: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '0.65rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-light)',
+                  fontSize: '0.84rem',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem' }}>
+              <button
+                type="button"
+                onClick={() => setNoticeModal({ isOpen: false, student: null, subjectCode: '', subjectName: '', percentage: '', message: '' })}
+                className="btn-secondary"
+                style={{ padding: '0.55rem 1rem', fontSize: '0.84rem' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendCustomNotice}
+                className="btn-primary"
+                style={{ padding: '0.55rem 1.25rem', fontSize: '0.84rem', background: '#DC2626' }}
+              >
+                <Send size={14} />
+                Send Notification
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

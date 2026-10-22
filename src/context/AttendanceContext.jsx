@@ -12,23 +12,25 @@ import { supabase, isSupabaseConfigured, getSupabaseConfigStatus } from '../lib/
 
 const AttendanceContext = createContext(null);
 
-// Purge old cached records from v6 so mock data doesn't persist
+// Purge old cached records so new accounts and subjects load cleanly
 try {
+  localStorage.removeItem('attendpulse_records_v7');
+  localStorage.removeItem('attendpulse_students_v7');
+  localStorage.removeItem('attendpulse_classes_v7');
   localStorage.removeItem('attendpulse_records_v6');
   localStorage.removeItem('attendpulse_students_v6');
-  localStorage.removeItem('attendpulse_records_v5');
 } catch (e) {}
 
-const STORAGE_KEY_CLASSES = 'attendpulse_classes_v7';
-const STORAGE_KEY_RECORDS = 'attendpulse_records_v7';
-const STORAGE_KEY_STUDENTS = 'attendpulse_students_v7';
-const STORAGE_KEY_NOTIFS = 'attendpulse_notifs_v7';
-const STORAGE_KEY_STAFF_NOTIFS = 'attendpulse_staff_notifs_v7';
-const STORAGE_KEY_ROLE = 'attendpulse_role_v7';
-const STORAGE_KEY_AUTH = 'unitrack_auth_session_v7';
-const STORAGE_KEY_CURR_STUDENT = 'attendpulse_curr_stu_v7';
-const STORAGE_KEY_CURR_TEACHER = 'attendpulse_curr_prof_v7';
-const STORAGE_KEY_SEL_CLASS = 'attendpulse_sel_class_v7';
+const STORAGE_KEY_CLASSES = 'attendpulse_classes_v8';
+const STORAGE_KEY_RECORDS = 'attendpulse_records_v8';
+const STORAGE_KEY_STUDENTS = 'attendpulse_students_v8';
+const STORAGE_KEY_NOTIFS = 'attendpulse_notifs_v8';
+const STORAGE_KEY_STAFF_NOTIFS = 'attendpulse_staff_notifs_v8';
+const STORAGE_KEY_ROLE = 'attendpulse_role_v8';
+const STORAGE_KEY_AUTH = 'unitrack_auth_session_v8';
+const STORAGE_KEY_CURR_STUDENT = 'attendpulse_curr_stu_v8';
+const STORAGE_KEY_CURR_TEACHER = 'attendpulse_curr_prof_v8';
+const STORAGE_KEY_SEL_CLASS = 'attendpulse_sel_class_v8';
 
 export const AttendanceProvider = ({ children }) => {
   const [role, setRole] = useState(() => {
@@ -67,7 +69,7 @@ export const AttendanceProvider = ({ children }) => {
   });
 
   const [studentsList, setStudentsList] = useState(() => {
-    const ALLOWED_NAMES = ['koshin', 'abijith vasudev', 'enoch john', 'thirush', 'naresh'];
+    const ALLOWED_NAMES = ['arun', 'priya', 'kavin', 'divya', 'sanjay'];
     try {
       const saved = localStorage.getItem(STORAGE_KEY_STUDENTS);
       if (saved) {
@@ -166,7 +168,7 @@ export const AttendanceProvider = ({ children }) => {
         }
 
         if (stuRes.data && stuRes.data.length > 0) {
-          const ALLOWED_NAMES = ['koshin', 'abijith vasudev', 'enoch john', 'thirush', 'naresh'];
+          const ALLOWED_NAMES = ['arun', 'priya', 'kavin', 'divya', 'sanjay'];
           const filtered = stuRes.data
             .filter((s) => ALLOWED_NAMES.some((n) => (s.name || '').toLowerCase().includes(n)))
             .map((s) => {
@@ -177,7 +179,7 @@ export const AttendanceProvider = ({ children }) => {
                 ...s,
                 rollNo: s.roll_no ?? s.rollNo,
                 attendance:
-                  s.attendance && s.attendance.APP101
+                  s.attendance && s.attendance.DSA101
                     ? s.attendance
                     : defaultStu
                     ? defaultStu.attendance
@@ -389,9 +391,9 @@ export const AttendanceProvider = ({ children }) => {
 
   // Distinct 3 subjects for student aggregate statistics
   const DISTINCT_SUBJECTS = [
-    { code: 'APP101', name: 'Advanced Programming and Practice', professor: 'Dr. Robert Vance', color: '#4F46E5' },
-    { code: 'DSA102', name: 'Data Structures and Algorithms', professor: 'Dr. Elena Rostova', color: '#0284c7' },
-    { code: 'OS103', name: 'Operating Systems', professor: 'Dr. Marcus Chen', color: '#059669' },
+    { code: 'DSA101', name: 'Data Structures and Algorithms', professor: 'Dr. Rajesh Sharma', color: '#2563EB' },
+    { code: 'OS102', name: 'Operating Systems', professor: 'Prof. Meera Nair', color: '#059669' },
+    { code: 'DBMS103', name: 'Database Management Systems', professor: 'Prof. Meera Nair', color: '#7C3AED' },
   ];
 
   const subjectStats = DISTINCT_SUBJECTS.map((sub) => {
@@ -413,25 +415,28 @@ export const AttendanceProvider = ({ children }) => {
   // Active live class helper (only 1 can be live across the entire portal)
   const activeLiveClass = classes.find((c) => c.status === 'live') || null;
 
-  // Teacher portal data: all 4 classes for current teacher
+  // Teacher portal data: classes assigned to current teacher
   const effectiveClasses = Array.isArray(classes) && classes.length > 0 ? classes : INITIAL_CLASSES;
+  const assignedCodes = Array.isArray(currentProfessor?.assignedSubjects)
+    ? currentProfessor.assignedSubjects.map((s) => s.toUpperCase())
+    : [currentProfessor?.subjectCode?.toUpperCase()].filter(Boolean);
+
   let teacherClasses = effectiveClasses
     .filter((c) => {
       const cProfId = (c.professorId || c.professor_id || '').toLowerCase();
       const currProfId = (currentProfessor?.id || '').toLowerCase();
-      const cCode = (c.code || '').toLowerCase();
-      const currSubCode = (currentProfessor?.subjectCode || '').toLowerCase();
-      return (cProfId && cProfId === currProfId) || (cCode && cCode === currSubCode);
+      const cCode = (c.code || '').toUpperCase();
+      return (cProfId && cProfId === currProfId) || assignedCodes.includes(cCode);
     })
     .sort((a, b) => (a.order || a.order_num || 0) - (b.order || b.order_num || 0));
 
   if (teacherClasses.length === 0) {
     teacherClasses = INITIAL_CLASSES
-      .filter((c) => c.professorId === currentProfessor?.id || c.code === currentProfessor?.subjectCode)
+      .filter((c) => c.professorId === currentProfessor?.id || assignedCodes.includes((c.code || '').toUpperCase()))
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   }
 
-  // Student portal data: exactly 4 classes for student's daily schedule
+  // Student portal data: exactly 3 classes for student's daily schedule
   let studentDailyClasses = effectiveClasses
     .filter((c) => c.isStudentDaily || c.is_student_daily)
     .sort((a, b) => (a.studentPeriodOrder || a.student_period_order || 0) - (b.studentPeriodOrder || b.student_period_order || 0));
@@ -443,23 +448,25 @@ export const AttendanceProvider = ({ children }) => {
   }
 
   // Determine current active/selected teacher class
-  // 1. If selectedClassId matches an unlocked/completed class for this teacher, use it
-  // 2. Otherwise default to currently live class, or first uncompleted (ready) class, or first class
   const currentTeacherClass =
     teacherClasses.find((c) => c.id === selectedClassId) ||
     teacherClasses.find((c) => c.status === 'live') ||
     teacherClasses.find((c) => c.status === 'ready') ||
     teacherClasses[0];
 
-  // Students attendance list for current teacher's subject
+  // Active subject for current teacher class
+  const activeTeacherSubjectCode = currentTeacherClass?.code || currentProfessor?.subjectCode || 'DSA101';
+
+  // Students attendance list for current teacher's active subject
   const teacherSubjectStudents = studentsList.map((stu) => {
-    const defaultAtt = STUDENTS.find((s) => s.id === stu.id)?.attendance?.[currentProfessor?.subjectCode] || { attended: 22, total: 30 };
-    const stuAtt = stu.attendance?.[currentProfessor?.subjectCode];
+    const defaultAtt = STUDENTS.find((s) => s.id === stu.id)?.attendance?.[activeTeacherSubjectCode] || { attended: 22, total: 30 };
+    const stuAtt = stu.attendance?.[activeTeacherSubjectCode];
     const att = (stuAtt && (stuAtt.attended !== undefined || stuAtt.total !== undefined)) ? stuAtt : defaultAtt;
     const pct = att.total > 0 ? ((att.attended / att.total) * 100).toFixed(1) : '0.0';
     const isBelow75 = parseFloat(pct) < 75;
     return {
       ...stu,
+      subjectCode: activeTeacherSubjectCode,
       subjectAttended: att.attended,
       subjectTotal: att.total,
       percentage: pct,
@@ -509,6 +516,7 @@ export const AttendanceProvider = ({ children }) => {
       const sRoll = (s.rollNo || s.roll_no || '').toLowerCase().trim();
       const sName = (s.name || '').toLowerCase().trim();
       const sFirstName = sName.split(' ')[0];
+      const sUsername = (s.username || '').toLowerCase().trim();
       const sId = (s.id || '').toLowerCase().trim();
 
       const idMatches =
@@ -516,14 +524,17 @@ export const AttendanceProvider = ({ children }) => {
         sRoll === cleanId ||
         sName === cleanId ||
         sFirstName === cleanId ||
+        sUsername === cleanId ||
         sId === cleanId;
 
       if (!idMatches) return false;
 
       return (
         cleanPass === 'student123' ||
-        cleanPass === 'koshin123' ||
+        cleanPass === 'password' ||
+        cleanPass === 'password123' ||
         cleanPass === `${sFirstName}123` ||
+        cleanPass === `${sUsername}123` ||
         cleanPass === s.password
       );
     };
@@ -532,21 +543,29 @@ export const AttendanceProvider = ({ children }) => {
       const tEmail = (t.email || '').toLowerCase().trim();
       const tEmpId = (t.empId || t.emp_id || '').toLowerCase().trim();
       const tName = (t.name || '').toLowerCase().trim();
+      const tFirstName = tName.split(' ')[0];
+      const tUsername = (t.username || '').toLowerCase().trim();
       const tId = (t.id || '').toLowerCase().trim();
 
       const idMatches =
         tEmail === cleanId ||
         tEmpId === cleanId ||
+        tUsername === cleanId ||
         tName.includes(cleanId) ||
-        tId === cleanId;
+        tFirstName.includes(cleanId) ||
+        tId === cleanId ||
+        (cleanId === 'teacher1' && t.id === 'FAC-001') ||
+        (cleanId === 'teacher2' && t.id === 'FAC-002');
 
       if (!idMatches) return false;
 
       return (
-        cleanPass === 'vance123' ||
+        cleanPass === 'teacher123' ||
         cleanPass === 'faculty123' ||
         cleanPass === 'staff123' ||
-        cleanPass === 'teacher123' ||
+        cleanPass === 'password' ||
+        cleanPass === 'password123' ||
+        cleanPass === `${tUsername}123` ||
         cleanPass === t.password
       );
     };
@@ -871,6 +890,14 @@ export const AttendanceProvider = ({ children }) => {
         };
       }
 
+      if (cls.status === 'completed') {
+        sounds.playError();
+        return {
+          success: false,
+          error: `Attendance session for ${cls.name} (${cls.code}) has been closed by the faculty. No further QR submissions are accepted.`,
+        };
+      }
+
       // If class is not yet marked live in this client, scanning the professor's QR code activates it
       if (cls.status !== 'live') {
         setClasses((prev) =>
@@ -1071,15 +1098,22 @@ export const AttendanceProvider = ({ children }) => {
   };
 
   // Staff Sends Low Attendance Reminder Notification to a Student
-  // (In student portal, notifications are strictly sended by staff)
-  const sendStudentReminder = (studentId, customNote) => {
+  const sendStudentReminder = (studentId, customNote, specificSubjectCode) => {
     const student = studentsList.find((s) => s.id === studentId);
-    if (!student) return;
+    if (!student) return { success: false, error: 'Student not found.' };
 
-    const studentSubjectData = student.attendance?.[currentProfessor.subjectCode] || { attended: 0, total: 30 };
+    const targetSubCode = specificSubjectCode || currentTeacherClass?.code || currentProfessor?.subjectCode || 'DSA101';
+    const subObj = DISTINCT_SUBJECTS.find((s) => s.code === targetSubCode) || {
+      code: targetSubCode,
+      name: currentProfessor?.subjectName || 'Course',
+    };
+
+    const studentSubjectData = student.attendance?.[targetSubCode] || { attended: 0, total: 30 };
     const pct = studentSubjectData.total > 0
       ? ((studentSubjectData.attended / studentSubjectData.total) * 100).toFixed(1)
       : '0.0';
+
+    const defaultMsg = `Your attendance in ${subObj.name} (${subObj.code}) has fallen below 75% (${pct}%). Please attend upcoming classes regularly to improve your attendance.`;
 
     const newNotification = {
       id: `NOTIF-${Date.now()}`,
@@ -1087,14 +1121,13 @@ export const AttendanceProvider = ({ children }) => {
       studentName: student.name,
       teacherId: currentProfessor.id,
       teacherName: currentProfessor.name,
-      subjectCode: currentProfessor.subjectCode,
-      subjectName: currentProfessor.subjectName,
+      subjectCode: subObj.code,
+      subjectName: subObj.name,
       percentage: pct,
       senderRole: 'staff',
-      message:
-        customNote ||
-        `Official Faculty Attendance Notice from ${currentProfessor.name}: Your attendance in ${currentProfessor.subjectName} (${currentProfessor.subjectCode}) is currently ${pct}%, which is below the mandatory 75% examination threshold. Please meet during office hours.`,
-      timestamp: 'Just now',
+      message: customNote || defaultMsg,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: 'Today',
       isRead: false,
     };
 
@@ -1110,10 +1143,28 @@ export const AttendanceProvider = ({ children }) => {
       channel.close();
     } catch (e) {}
 
+    // Persist to Supabase
+    if (isSupabaseConfigured() && supabase) {
+      supabase.from('notifications').insert({
+        id: newNotification.id,
+        student_id: newNotification.studentId,
+        student_name: newNotification.studentName,
+        teacher_id: newNotification.teacherId,
+        teacher_name: newNotification.teacherName,
+        subject_code: newNotification.subjectCode,
+        subject_name: newNotification.subjectName,
+        message: newNotification.message,
+        percentage: newNotification.percentage,
+        is_read: false,
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase notification note:', error);
+      });
+    }
+
     sounds.playSuccess();
     return {
       success: true,
-      message: `Low attendance warning notice sent directly to ${student.name} (${student.rollNo})!`,
+      message: `Low attendance notification sent directly to ${student.name} (${student.rollNo}) for ${subObj.name}!`,
     };
   };
 
@@ -1596,6 +1647,7 @@ export const AttendanceProvider = ({ children }) => {
         students: studentsList,
         allStudents: studentsList,
         classes,
+        subjects: DISTINCT_SUBJECTS,
         activeLiveClass,
         setClassStatus,
         attendanceRecords,

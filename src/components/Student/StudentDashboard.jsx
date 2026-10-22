@@ -425,7 +425,7 @@ export const StudentDashboard = () => {
                   Today's Classes Schedule
                 </h2>
                 <div className="section-subtitle">
-                  Daily academic timetable (4 Classes Per Day for Student)
+                  Daily academic timetable (3 Subject Classes Scheduled Today)
                 </div>
               </div>
 
@@ -454,10 +454,10 @@ export const StudentDashboard = () => {
               }}
             >
               {[
-                { key: 'daily', label: "📅 Today's 4-Period Schedule (4 Classes)" },
-                { key: 'APP101', label: '💻 APP101 (4 Classes • Dr. Vance)' },
-                { key: 'DSA102', label: '📊 DSA102 (4 Classes • Dr. Rostova)' },
-                { key: 'OS103', label: '⚙️ OS103 (4 Classes • Dr. Chen)' },
+                { key: 'daily', label: "📅 All 3 Scheduled Classes Today" },
+                { key: 'DSA101', label: '📊 DSA101 • Dr. Rajesh Sharma' },
+                { key: 'OS102', label: '⚙️ OS102 • Prof. Meera Nair' },
+                { key: 'DBMS103', label: '🗄️ DBMS103 • Prof. Meera Nair' },
               ].map((tab) => {
                 const isActive = scheduleFilter === tab.key;
                 const hasLiveClass = tab.key === 'daily'

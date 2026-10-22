@@ -11,7 +11,7 @@ import {
 import { BrandLogo } from '../Common/BrandLogo';
 
 export const Login = () => {
-  const { login, isSupabaseConfigured } = useAttendance();
+  const { login } = useAttendance();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -69,34 +69,6 @@ export const Login = () => {
         <div style={{ fontSize: '0.92rem', color: '#64748B', fontWeight: 500 }}>
           Smart Attendance System
         </div>
-        {isSupabaseConfigured && (
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.2rem 0.65rem',
-              borderRadius: '999px',
-              background: 'rgba(16, 185, 129, 0.12)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              color: '#059669',
-              fontSize: '0.74rem',
-              fontWeight: 700,
-              marginTop: '0.65rem',
-            }}
-          >
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: '50%',
-                backgroundColor: '#10B981',
-                boxShadow: '0 0 6px #10B981',
-              }}
-            />
-            <span>Supabase Cloud Synced</span>
-          </div>
-        )}
       </div>
 
       {/* Main Container */}
@@ -116,9 +88,6 @@ export const Login = () => {
             <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
               Portal Sign In
             </h2>
-            <p style={{ fontSize: '0.82rem', color: '#64748B', marginTop: '0.35rem', margin: '0.35rem 0 0 0' }}>
-              Common authentication portal for Students and Faculty members.
-            </p>
           </div>
 
           {/* Error Message */}

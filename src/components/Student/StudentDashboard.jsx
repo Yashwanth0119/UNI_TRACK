@@ -34,17 +34,12 @@ export const StudentDashboard = () => {
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [selectedClassForScan, setSelectedClassForScan] = useState(null);
-  const [scheduleFilter, setScheduleFilter] = useState('daily'); // 'daily' | 'APP101' | 'DSA102' | 'OS103'
-
-  // 4 classes for the student for the day
+  // Today's scheduled classes for student
   const displayedClasses = React.useMemo(() => {
-    if (scheduleFilter === 'daily') {
-      return studentDailyClasses && studentDailyClasses.length > 0
-        ? studentDailyClasses
-        : classes.filter((c) => c.isStudentDaily).slice(0, 4);
-    }
-    return classes.filter((c) => c.code === scheduleFilter).slice(0, 4);
-  }, [scheduleFilter, studentDailyClasses, classes]);
+    return studentDailyClasses && studentDailyClasses.length > 0
+      ? studentDailyClasses
+      : classes.filter((c) => c.isStudentDaily);
+  }, [studentDailyClasses, classes]);
 
   const [toastMessage, setToastMessage] = useState('');
 
@@ -467,132 +462,7 @@ export const StudentDashboard = () => {
               </span>
             </div>
 
-            {/* Course / Timetable Filter Tabs (All Views Feature Exactly 4 Classes) */}
-            <div
-              style={{
-                display: 'flex',
-                gap: '0.45rem',
-                flexWrap: 'wrap',
-                marginBottom: '1rem',
-              }}
-            >
-              {[
-                { key: 'daily', label: "📅 All 3 Scheduled Classes Today" },
-                { key: 'DSA101', label: '📊 DSA101 • Dr. Rajesh Sharma' },
-                { key: 'OS102', label: '⚙️ OS102 • Prof. Meera Nair' },
-                { key: 'DBMS103', label: '🗄️ DBMS103 • Prof. Meera Nair' },
-              ].map((tab) => {
-                const isActive = scheduleFilter === tab.key;
-                const hasLiveClass = tab.key === 'daily'
-                  ? displayedClasses.some((c) => c.status === 'live')
-                  : activeLiveClass?.code === tab.key;
-
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setScheduleFilter(tab.key)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      padding: '0.4rem 0.8rem',
-                      borderRadius: 'var(--radius-full)',
-                      fontSize: '0.78rem',
-                      fontWeight: isActive ? 700 : 500,
-                      background: isActive ? 'var(--primary)' : '#FFFFFF',
-                      color: isActive ? '#FFFFFF' : 'var(--text-main)',
-                      border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
-                      boxShadow: isActive ? '0 2px 8px rgba(36, 87, 255, 0.25)' : 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <span>{tab.label}</span>
-                    {hasLiveClass && (
-                      <span
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          background: '#10B981',
-                          boxShadow: '0 0 6px #10B981',
-                        }}
-                      />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* If there's an active live class in another course tab, highlight it */}
-            {activeLiveClass && !displayedClasses.some((c) => c.id === activeLiveClass.id) && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 1rem',
-                  background: '#ECFDF5',
-                  border: '1px solid #A7F3D0',
-                  borderRadius: 'var(--radius-md)',
-                  marginBottom: '1rem',
-                  gap: '0.75rem',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#047857', fontWeight: 600 }}>
-                  <Radio size={16} className="pulse-badge" />
-                  <span>
-                    Faculty has opened attendance for <strong>{activeLiveClass.code}</strong> ({activeLiveClass.name})
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
-                  <button
-                    onClick={() => setScheduleFilter(activeLiveClass.code)}
-                    className="btn-secondary"
-                    style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
-                  >
-                    Switch to {activeLiveClass.code}
-                  </button>
-                  {getStudentClassStatus(activeLiveClass.id) ? (
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        color: '#059669',
-                        fontWeight: 700,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        background: '#FFFFFF',
-                        padding: '0.3rem 0.65rem',
-                        borderRadius: 'var(--radius-sm)',
-                        border: '1px solid #A7F3D0',
-                      }}
-                    >
-                      <CheckCircle2 size={13} /> Marked
-                    </span>
-                  ) : (
-                    <button
-                      disabled={scannerOpen}
-                      onClick={() => handleOpenScannerForClass(activeLiveClass.id)}
-                      className="btn-primary"
-                      style={{
-                        padding: '0.3rem 0.75rem',
-                        fontSize: '0.75rem',
-                        opacity: scannerOpen ? 0.65 : 1,
-                        cursor: scannerOpen ? 'not-allowed' : 'pointer',
-                      }}
-                      title={scannerOpen ? 'A QR scanner is already active' : 'Open scanner'}
-                    >
-                      <QrCode size={14} /> {scannerOpen ? 'Scanner Active' : 'Scan Now'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Class Cards List (4 Classes) */}
+            {/* Class Cards List */}
             <div className="class-list">
               {displayedClasses.map((cls, idx) => {
                 const attendedRecord = getStudentClassStatus(cls.id);

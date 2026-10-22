@@ -12,16 +12,23 @@ import { supabase, isSupabaseConfigured, getSupabaseConfigStatus } from '../lib/
 
 const AttendanceContext = createContext(null);
 
-const STORAGE_KEY_CLASSES = 'attendpulse_classes_v6';
-const STORAGE_KEY_RECORDS = 'attendpulse_records_v6';
-const STORAGE_KEY_STUDENTS = 'attendpulse_students_v6';
-const STORAGE_KEY_NOTIFS = 'attendpulse_notifs_v6';
-const STORAGE_KEY_STAFF_NOTIFS = 'attendpulse_staff_notifs_v6';
-const STORAGE_KEY_ROLE = 'attendpulse_role_v6';
-const STORAGE_KEY_AUTH = 'unitrack_auth_session';
-const STORAGE_KEY_CURR_STUDENT = 'attendpulse_curr_stu_v6';
-const STORAGE_KEY_CURR_TEACHER = 'attendpulse_curr_prof_v6';
-const STORAGE_KEY_SEL_CLASS = 'attendpulse_sel_class_v6';
+// Purge old cached records from v6 so mock data doesn't persist
+try {
+  localStorage.removeItem('attendpulse_records_v6');
+  localStorage.removeItem('attendpulse_students_v6');
+  localStorage.removeItem('attendpulse_records_v5');
+} catch (e) {}
+
+const STORAGE_KEY_CLASSES = 'attendpulse_classes_v7';
+const STORAGE_KEY_RECORDS = 'attendpulse_records_v7';
+const STORAGE_KEY_STUDENTS = 'attendpulse_students_v7';
+const STORAGE_KEY_NOTIFS = 'attendpulse_notifs_v7';
+const STORAGE_KEY_STAFF_NOTIFS = 'attendpulse_staff_notifs_v7';
+const STORAGE_KEY_ROLE = 'attendpulse_role_v7';
+const STORAGE_KEY_AUTH = 'unitrack_auth_session_v7';
+const STORAGE_KEY_CURR_STUDENT = 'attendpulse_curr_stu_v7';
+const STORAGE_KEY_CURR_TEACHER = 'attendpulse_curr_prof_v7';
+const STORAGE_KEY_SEL_CLASS = 'attendpulse_sel_class_v7';
 
 export const AttendanceProvider = ({ children }) => {
   const [role, setRole] = useState(() => {
@@ -182,7 +189,7 @@ export const AttendanceProvider = ({ children }) => {
           }
         }
 
-        if (recRes.data && recRes.data.length > 0) {
+        if (recRes.data) {
           setAttendanceRecords(
             recRes.data.map((r) => ({
               ...r,
@@ -243,6 +250,34 @@ export const AttendanceProvider = ({ children }) => {
           )
           .on(
             'postgres_changes',
+            { event: 'DELETE', schema: 'public', table: 'attendance_records' },
+            (payload) => {
+              if (payload.old) {
+                setAttendanceRecords((prev) => prev.filter((r) => r.id !== payload.old.id));
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'students' },
+            (payload) => {
+              if (payload.new) {
+                const updatedStu = payload.new;
+                setStudentsList((prev) =>
+                  prev.map((s) =>
+                    s.id === updatedStu.id || (updatedStu.roll_no && (s.rollNo === updatedStu.roll_no || s.roll_no === updatedStu.roll_no))
+                      ? {
+                          ...s,
+                          attendance: updatedStu.attendance || s.attendance,
+                        }
+                      : s
+                  )
+                );
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
             { event: 'UPDATE', schema: 'public', table: 'classes' },
             (payload) => {
               if (payload.new) {
@@ -270,7 +305,7 @@ export const AttendanceProvider = ({ children }) => {
           .order('created_at', { ascending: false })
           .limit(30);
 
-        if (latest && latest.length > 0) {
+        if (latest !== undefined && latest !== null) {
           const mapped = latest.map((r) => ({
             id: r.id,
             classId: r.class_id ?? r.classId,
@@ -285,14 +320,7 @@ export const AttendanceProvider = ({ children }) => {
             method: r.method,
           }));
 
-          setAttendanceRecords((prev) => {
-            const existingIds = new Set(prev.map((x) => x.id));
-            const newOnes = mapped.filter((x) => !existingIds.has(x.id));
-            if (newOnes.length > 0) {
-              return [...newOnes, ...prev];
-            }
-            return prev;
-          });
+          setAttendanceRecords(mapped);
         }
       } catch (e) {}
     }, 3000);
@@ -1525,6 +1553,17 @@ export const AttendanceProvider = ({ children }) => {
     return { success: true, message: `Marked all students as Absent.` };
   };
 
+  // Clear all scanned attendance records for a class session
+  const clearSessionAttendance = (classId) => {
+    const targetClass = classes.find((c) => c.id === classId) || currentTeacherClass;
+    if (!targetClass) return { success: false, message: 'Class session not found.' };
+    const res = markAllStudentsAbsent(targetClass.id);
+    return {
+      success: true,
+      message: `Cleared all live attendee records for ${targetClass.name}. Feed is now empty.`,
+    };
+  };
+
   const resetDemoData = () => {
     setClasses(INITIAL_CLASSES);
     setStudentsList(STUDENTS);
@@ -1573,6 +1612,7 @@ export const AttendanceProvider = ({ children }) => {
         markStudentAbsent,
         markAllStudentsPresent,
         markAllStudentsAbsent,
+        clearSessionAttendance,
         resetDemoData,
         studentDailyClasses,
         // Sequential Teacher Class Operations

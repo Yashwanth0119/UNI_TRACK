@@ -40,6 +40,7 @@ export const TeacherDashboard = () => {
     markStudentAbsent,
     markAllStudentsPresent,
     markAllStudentsAbsent,
+    clearSessionAttendance,
   } = useAttendance();
 
   const [activeModalClassId, setActiveModalClassId] = useState(null);
@@ -131,13 +132,18 @@ export const TeacherDashboard = () => {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  // Present records for active class today
-  const classRecordsToday = attendanceRecords.filter(
-    (r) =>
-      r.classId === activeClass?.id ||
-      (activeClass && r.classCode === activeClass.code) ||
-      (activeClass && r.classCode === currentProfessor.subjectCode)
-  );
+  // Present records strictly for active class session today, deduplicated per student
+  const classRecordsToday = React.useMemo(() => {
+    if (!activeClass?.id) return [];
+    const seen = new Set();
+    return attendanceRecords.filter((r) => {
+      if (r.classId !== activeClass.id) return false;
+      const key = (r.studentId || r.rollNo || '').toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [attendanceRecords, activeClass?.id]);
 
   // Filter students
   const filteredStudents = teacherSubjectStudents.filter((stu) => {
@@ -712,7 +718,7 @@ export const TeacherDashboard = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span
                   style={{
                     fontSize: '0.78rem',
@@ -730,6 +736,37 @@ export const TeacherDashboard = () => {
                   <Radio size={12} className={isClassLive ? 'pulse-badge' : ''} />
                   {classRecordsToday.length} of {teacherSubjectStudents.length} Students Scanned
                 </span>
+
+                {classRecordsToday.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (activeClass) {
+                        const res = clearSessionAttendance(activeClass.id);
+                        if (res?.message) setToastMessage(res.message);
+                        setTimeout(() => setToastMessage(''), 3500);
+                      }
+                    }}
+                    style={{
+                      fontSize: '0.74rem',
+                      fontWeight: 600,
+                      padding: '0.25rem 0.65rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: '#FEF2F2',
+                      color: '#DC2626',
+                      border: '1px solid #FECACA',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Clear attendee records for this class session"
+                  >
+                    <RotateCcw size={12} />
+                    Reset Attendees
+                  </button>
+                )}
               </div>
             </div>
 

@@ -14,14 +14,26 @@ import {
   Check,
 } from 'lucide-react';
 
-export const QrScannerModal = ({ isOpen, onClose }) => {
+export const QrScannerModal = ({ isOpen, onClose, preselectedClassId, onScanSuccess }) => {
   const {
+    currentStudent,
+    attendanceRecords,
     markAttendanceFromScan,
     activeLiveClass,
   } = useAttendance();
 
   const [scanStatus, setScanStatus] = useState({ type: null, message: '', classInfo: null });
   const [cameraError, setCameraError] = useState(null);
+
+  const targetClassId = preselectedClassId || activeLiveClass?.id;
+  const alreadyMarkedRec = attendanceRecords.find(
+    (r) =>
+      targetClassId &&
+      r.classId === targetClassId &&
+      (r.studentId === currentStudent?.id ||
+        (currentStudent?.rollNo && r.rollNo === currentStudent?.rollNo) ||
+        (currentStudent?.roll_no && r.rollNo === currentStudent?.roll_no))
+  );
 
   const html5QrCodeRef = useRef(null);
   const isStoppingRef = useRef(false);
@@ -48,28 +60,45 @@ export const QrScannerModal = ({ isOpen, onClose }) => {
     if (isScanningLockedRef.current) return;
     isScanningLockedRef.current = true;
 
+    // Immediately shut down camera scanner
+    stopScanner();
+
     const result = markAttendanceFromScan(text);
     if (result && result.success) {
-      stopScanner();
-      setScanStatus({
-        type: 'success',
-        message: result.message || 'Attendance verified & marked successfully!',
-        classInfo: result.classInfo,
-        record: result.record,
-        prevSubAttended: result.prevSubAttended,
-        newSubAttended: result.newSubAttended,
-        prevSubTotal: result.prevSubTotal,
-        newSubTotal: result.newSubTotal,
-        prevTotalAttended: result.prevTotalAttended,
-        newTotalAttended: result.newTotalAttended,
-        totalClassesCount: result.totalClassesCount,
-        prevSubPct: result.prevSubPct,
-        newSubPct: result.newSubPct,
-        prevOverallPct: result.prevOverallPct,
-        newOverallPct: result.newOverallPct,
-        studentName: result.studentName,
-        rollNo: result.rollNo,
-      });
+      if (result.alreadyMarked) {
+        setScanStatus({
+          type: 'already-marked',
+          message: result.message || 'Attendance is already recorded for this subject session.',
+          record: result.record,
+          classInfo: result.classInfo,
+        });
+        setTimeout(() => {
+          onClose();
+        }, 2200);
+      } else {
+        setScanStatus({
+          type: 'success',
+          message: result.message || 'Attendance verified & marked successfully!',
+          classInfo: result.classInfo,
+          record: result.record,
+          prevSubAttended: result.prevSubAttended,
+          newSubAttended: result.newSubAttended,
+          prevSubTotal: result.prevSubTotal,
+          newSubTotal: result.newSubTotal,
+          prevTotalAttended: result.prevTotalAttended,
+          newTotalAttended: result.newTotalAttended,
+          totalClassesCount: result.totalClassesCount,
+          prevSubPct: result.prevSubPct,
+          newSubPct: result.newSubPct,
+          prevOverallPct: result.prevOverallPct,
+          newOverallPct: result.newOverallPct,
+          studentName: result.studentName,
+          rollNo: result.rollNo,
+        });
+        if (onScanSuccess) {
+          onScanSuccess(result);
+        }
+      }
     } else {
       setScanStatus({
         type: 'error',
@@ -80,11 +109,26 @@ export const QrScannerModal = ({ isOpen, onClose }) => {
         isScanningLockedRef.current = false;
       }, 2500);
     }
-  }, [markAttendanceFromScan, stopScanner]);
+  }, [markAttendanceFromScan, stopScanner, onClose, onScanSuccess]);
 
-  // Initialize camera scanner when modal opens
+  // Auto close modal after successful scan display so user returns to dashboard
+  useEffect(() => {
+    if (scanStatus.type === 'success') {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [scanStatus.type, onClose]);
+
+  // Initialize camera scanner when modal opens (unless already marked)
   useEffect(() => {
     if (!isOpen) return;
+
+    if (alreadyMarkedRec) {
+      stopScanner();
+      return;
+    }
 
     isScanningLockedRef.current = false;
     setScanStatus({ type: null, message: '', classInfo: null });
@@ -128,7 +172,7 @@ export const QrScannerModal = ({ isOpen, onClose }) => {
       clearTimeout(timeout);
       stopScanner();
     };
-  }, [isOpen, handleScanSuccess, stopScanner]);
+  }, [isOpen, alreadyMarkedRec, handleScanSuccess, stopScanner]);
 
   // File upload fallback
   const handleFileUpload = async (e) => {
@@ -180,8 +224,87 @@ export const QrScannerModal = ({ isOpen, onClose }) => {
 
         {/* Modal Body */}
         <div className="modal-body">
-          {/* SUCCESS VIEW AFTER SCANNING */}
-          {scanStatus.type === 'success' ? (
+          {alreadyMarkedRec && scanStatus.type !== 'success' ? (
+            <div style={{ textAlign: 'center', padding: '1.5rem 0.5rem' }}>
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  background: '#ECFDF5',
+                  border: '2px solid #10B981',
+                  color: '#059669',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 1rem',
+                  boxShadow: '0 0 20px rgba(16, 185, 129, 0.25)',
+                }}
+              >
+                <CheckCircle size={36} />
+              </div>
+
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: 'var(--radius-full)',
+                  background: '#ECFDF5',
+                  color: '#059669',
+                  border: '1px solid #A7F3D0',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  marginBottom: '0.5rem',
+                }}
+              >
+                Attendance Already Marked
+              </div>
+
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+                Attendance Already Marked!
+              </h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.86rem', maxWidth: '380px', margin: '0 auto 1.25rem' }}>
+                Your attendance for this class was already recorded at <strong>{alreadyMarkedRec.timestamp}</strong>. The scanner is locked and cannot be reopened for this session.
+              </p>
+
+              <div
+                style={{
+                  background: '#F9FAFB',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.85rem 1rem',
+                  textAlign: 'left',
+                  marginBottom: '1.25rem',
+                  fontSize: '0.82rem',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Class:</span>
+                  <strong>{alreadyMarkedRec.className || alreadyMarkedRec.classCode}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Status:</span>
+                  <span style={{ color: '#059669', fontWeight: 700 }}>PRESENT ✓</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Verified Time:</span>
+                  <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{alreadyMarkedRec.timestamp}</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={onClose}
+                style={{ width: '100%', padding: '0.75rem', fontSize: '0.92rem' }}
+              >
+                Close Scanner
+              </button>
+            </div>
+          ) : scanStatus.type === 'success' ? (
             <div style={{ textAlign: 'center', padding: '1rem 0.25rem' }}>
               {/* Animated Green Badge Icon */}
               <div
@@ -370,12 +493,32 @@ export const QrScannerModal = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
+              <div
+                style={{
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.65rem 0.85rem',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.45rem',
+                  fontSize: '0.82rem',
+                  color: '#065F46',
+                  fontWeight: 600,
+                }}
+              >
+                <CheckCircle size={15} style={{ color: '#059669' }} />
+                <span>Scanner is now <strong>OFF</strong> • Returning to dashboard...</span>
+              </div>
+
               <button
                 className="btn-primary"
                 onClick={onClose}
                 style={{ width: '100%', padding: '0.8rem', fontSize: '0.92rem' }}
               >
-                Done (Back to Dashboard)
+                Done & Close Scanner (Back to Dashboard)
               </button>
             </div>
           ) : (

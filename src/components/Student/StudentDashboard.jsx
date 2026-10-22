@@ -46,26 +46,76 @@ export const StudentDashboard = () => {
     return classes.filter((c) => c.code === scheduleFilter).slice(0, 4);
   }, [scheduleFilter, studentDailyClasses, classes]);
 
+  const [toastMessage, setToastMessage] = useState('');
+
   // Check attendance status of student for a class
   const getStudentClassStatus = (classId) => {
+    if (!classId || !currentStudent) return null;
     const record = attendanceRecords.find(
-      (r) => r.classId === classId && r.studentId === currentStudent.id
+      (r) =>
+        r.classId === classId &&
+        (r.studentId === currentStudent.id ||
+          (currentStudent.rollNo && r.rollNo === currentStudent.rollNo) ||
+          (currentStudent.roll_no && r.rollNo === currentStudent.roll_no))
     );
     return record || null;
   };
 
   const handleOpenScannerForClass = (classId) => {
+    const alreadyMarked = getStudentClassStatus(classId);
+    if (alreadyMarked) {
+      setToastMessage(`✓ Attendance is already marked for this class session (${alreadyMarked.timestamp}). The scanner cannot be opened again.`);
+      setTimeout(() => setToastMessage(''), 4500);
+      return;
+    }
     setSelectedClassForScan(classId);
     setScannerOpen(true);
   };
 
-  // Student's records for today
-  const studentTodayRecords = attendanceRecords.filter(
-    (r) => r.studentId === currentStudent.id
-  );
+  // Student's records for today (deduplicated by classId)
+  const studentTodayRecords = React.useMemo(() => {
+    if (!currentStudent) return [];
+    const seenClasses = new Set();
+    return attendanceRecords.filter((r) => {
+      const isStu =
+        r.studentId === currentStudent.id ||
+        (currentStudent.rollNo && r.rollNo === currentStudent.rollNo) ||
+        (currentStudent.roll_no && r.rollNo === currentStudent.roll_no);
+      if (!isStu) return false;
+      if (seenClasses.has(r.classId)) return false;
+      seenClasses.add(r.classId);
+      return true;
+    });
+  }, [attendanceRecords, currentStudent]);
 
   return (
     <div className="student-dashboard animate-fade-in">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '5rem',
+            right: '2rem',
+            zIndex: 999,
+            padding: '0.85rem 1.25rem',
+            background: '#059669',
+            color: '#FFFFFF',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: '0 8px 24px rgba(5, 150, 105, 0.25)',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            animation: 'fadeIn 0.3s ease',
+          }}
+        >
+          <CheckCircle2 size={18} />
+          {toastMessage}
+        </div>
+      )}
+
       {/* Staff Shortage Notifications Alert Banner (Strictly Sent by Staff) */}
       {studentNotifications.length > 0 && (
         <div style={{ marginBottom: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -284,42 +334,87 @@ export const StudentDashboard = () => {
         {/* Left Column: Classes Schedule */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           {/* Quick Scanner Action Hero (Active when lecture is in session) */}
-          {activeLiveClass && (
-            <div className="glass-panel scan-hero-card">
-              <div className="scan-hero-text">
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontSize: '0.78rem',
-                    color: '#38bdf8',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    marginBottom: '0.25rem',
-                  }}
-                >
-                  <Radio size={14} className="pulse-badge" />
-                  Lecture In Session: {activeLiveClass.code}
-                </div>
-                <h3>
-                  Active: {activeLiveClass.code} ({activeLiveClass.name})
-                </h3>
-                <p>
-                  Attendance is open for {activeLiveClass.code} in {activeLiveClass.room}. Note: Scanners for other classes are locked while this lecture is ongoing.
-                </p>
-              </div>
-
-              <button
-                className="btn-primary"
-                onClick={() => handleOpenScannerForClass(activeLiveClass.id)}
-                style={{ padding: '0.8rem 1.6rem', fontSize: '0.95rem' }}
+          {activeLiveClass && (() => {
+            const liveMarkedRec = getStudentClassStatus(activeLiveClass.id);
+            return (
+              <div
+                className="glass-panel scan-hero-card"
+                style={
+                  liveMarkedRec
+                    ? {
+                        border: '1px solid #A7F3D0',
+                        background: 'linear-gradient(135deg, rgba(236, 253, 245, 0.8), rgba(255, 255, 255, 0.9))',
+                      }
+                    : {}
+                }
               >
-                <QrCode size={19} />
-                Scan for {activeLiveClass.code}
-              </button>
-            </div>
-          )}
+                <div className="scan-hero-text">
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.78rem',
+                      color: liveMarkedRec ? '#059669' : '#38bdf8',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      marginBottom: '0.25rem',
+                    }}
+                  >
+                    {liveMarkedRec ? (
+                      <>
+                        <CheckCircle2 size={14} />
+                        Attendance Marked for this Session
+                      </>
+                    ) : (
+                      <>
+                        <Radio size={14} className="pulse-badge" />
+                        Lecture In Session: {activeLiveClass.code}
+                      </>
+                    )}
+                  </div>
+                  <h3>
+                    Active: {activeLiveClass.code} ({activeLiveClass.name})
+                  </h3>
+                  <p>
+                    {liveMarkedRec
+                      ? `✓ Your attendance has been successfully recorded and verified at ${liveMarkedRec.timestamp}. The scanner is locked and cannot be reopened for this session.`
+                      : `Attendance is open for ${activeLiveClass.code} in ${activeLiveClass.room}. Note: Scanners for other classes are locked while this lecture is ongoing.`}
+                  </p>
+                </div>
+
+                {liveMarkedRec ? (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1.3rem',
+                      borderRadius: 'var(--radius-md)',
+                      background: '#ECFDF5',
+                      color: '#059669',
+                      border: '1px solid #A7F3D0',
+                      fontWeight: 700,
+                      fontSize: '0.92rem',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <CheckCircle2 size={18} />
+                    Attendance Marked ({liveMarkedRec.timestamp})
+                  </div>
+                ) : (
+                  <button
+                    className="btn-primary"
+                    onClick={() => handleOpenScannerForClass(activeLiveClass.id)}
+                    style={{ padding: '0.8rem 1.6rem', fontSize: '0.95rem' }}
+                  >
+                    <QrCode size={19} />
+                    Scan for {activeLiveClass.code}
+                  </button>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Today's Classes Section (4 Classes For Student) */}
           <div>
@@ -429,7 +524,7 @@ export const StudentDashboard = () => {
                     Faculty has opened attendance for <strong>{activeLiveClass.code}</strong> ({activeLiveClass.name})
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: '0.45rem' }}>
+                <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
                   <button
                     onClick={() => setScheduleFilter(activeLiveClass.code)}
                     className="btn-secondary"
@@ -437,13 +532,32 @@ export const StudentDashboard = () => {
                   >
                     Switch to {activeLiveClass.code}
                   </button>
-                  <button
-                    onClick={() => handleOpenScannerForClass(activeLiveClass.id)}
-                    className="btn-primary"
-                    style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem' }}
-                  >
-                    <QrCode size={14} /> Scan Now
-                  </button>
+                  {getStudentClassStatus(activeLiveClass.id) ? (
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        color: '#059669',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        background: '#FFFFFF',
+                        padding: '0.3rem 0.65rem',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid #A7F3D0',
+                      }}
+                    >
+                      <CheckCircle2 size={13} /> Marked
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleOpenScannerForClass(activeLiveClass.id)}
+                      className="btn-primary"
+                      style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem' }}
+                    >
+                      <QrCode size={14} /> Scan Now
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -776,6 +890,10 @@ export const StudentDashboard = () => {
         isOpen={scannerOpen}
         onClose={() => setScannerOpen(false)}
         preselectedClassId={selectedClassForScan}
+        onScanSuccess={(res) => {
+          setToastMessage(`✓ Attendance marked successfully for ${res?.classInfo?.name || 'class'}! Status: PRESENT ✓`);
+          setTimeout(() => setToastMessage(''), 5000);
+        }}
       />
     </div>
   );

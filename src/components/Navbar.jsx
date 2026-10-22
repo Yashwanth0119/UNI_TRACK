@@ -69,7 +69,7 @@ export const Navbar = () => {
                 width: 34,
                 height: 34,
                 borderRadius: '50%',
-                background: role === 'professor' ? 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)' : 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                background: role === 'professor' ? 'linear-gradient(135deg, #2457FF 0%, #688eff 100%)' : 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -92,9 +92,9 @@ export const Navbar = () => {
                       fontWeight: 700,
                       padding: '0.1rem 0.4rem',
                       borderRadius: '4px',
-                      background: '#EEF2FF',
-                      color: '#4F46E5',
-                      border: '1px solid #C7D2FE',
+                      background: 'var(--ice-glass)',
+                      color: 'var(--quantum-blue)',
+                      border: '1px solid rgba(36, 87, 255, 0.25)',
                     }}
                   >
                     {currentProfessor.subjectCode}

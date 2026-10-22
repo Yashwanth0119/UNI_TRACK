@@ -12,11 +12,11 @@ export const BrandLogo = ({ size = 38, showText = false, textSize = '1.35rem' })
         style={{ flexShrink: 0, display: 'block' }}
       >
         <defs>
-          {/* Deep Royal University Blue Gradient */}
+          {/* Quantum Blue Gradient */}
           <linearGradient id="crest_shield_grad" x1="6" y1="4" x2="46" y2="48" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#4338CA" />
-            <stop offset="45%" stopColor="#312E81" />
-            <stop offset="100%" stopColor="#1E1B4B" />
+            <stop offset="0%" stopColor="#5784FF" />
+            <stop offset="45%" stopColor="#2457FF" />
+            <stop offset="100%" stopColor="#0B2B99" />
           </linearGradient>
 
           {/* Academic Gold Gradient for Laurel & Tassels */}

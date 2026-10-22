@@ -398,7 +398,7 @@ export const AttendanceProvider = ({ children }) => {
 
   // Distinct 3 subjects for student aggregate statistics
   const DISTINCT_SUBJECTS = [
-    { code: 'DSA101', name: 'Data Structures and Algorithms', professor: 'Dr. Rajesh Sharma', color: '#2563EB' },
+    { code: 'DSA101', name: 'Data Structures and Algorithms', professor: 'Dr. Rajesh Sharma', color: '#2457FF' },
     { code: 'OS102', name: 'Operating Systems', professor: 'Prof. Meera Nair', color: '#059669' },
     { code: 'DBMS103', name: 'Database Management Systems', professor: 'Prof. Meera Nair', color: '#7C3AED' },
   ];
@@ -743,7 +743,7 @@ export const AttendanceProvider = ({ children }) => {
       particleCount: 70,
       spread: 60,
       origin: { y: 0.5 },
-      colors: ['#4F46E5', '#10b981', '#818CF8'],
+      colors: ['#2457FF', '#DFF7FF', '#10b981', '#5784FF'],
     });
 
     return {
@@ -818,7 +818,7 @@ export const AttendanceProvider = ({ children }) => {
       particleCount: 80,
       spread: 70,
       origin: { y: 0.5 },
-      colors: ['#4F46E5', '#10b981', '#38bdf8'],
+      colors: ['#2457FF', '#DFF7FF', '#10b981', '#5784FF'],
     });
 
     return {
@@ -1073,7 +1073,7 @@ export const AttendanceProvider = ({ children }) => {
         particleCount: 90,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#4F46E5', '#10b981', '#818CF8', '#fbbf24'],
+        colors: ['#2457FF', '#DFF7FF', '#10b981', '#5784FF', '#fbbf24'],
       });
 
       return {

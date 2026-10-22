@@ -310,9 +310,9 @@ export const TeacherDashboard = () => {
                 fontWeight: 600,
                 padding: '0.25rem 0.75rem',
                 borderRadius: 'var(--radius-full)',
-                background: completedCount === teacherClasses.length ? '#ECFDF5' : '#EEF2FF',
-                color: completedCount === teacherClasses.length ? '#059669' : '#4F46E5',
-                border: completedCount === teacherClasses.length ? '1px solid #A7F3D0' : '1px solid #C7D2FE',
+                background: completedCount === teacherClasses.length ? '#ECFDF5' : 'var(--ice-glass)',
+                color: completedCount === teacherClasses.length ? '#059669' : 'var(--quantum-blue)',
+                border: completedCount === teacherClasses.length ? '1px solid #A7F3D0' : '1px solid rgba(36, 87, 255, 0.25)',
               }}
             >
               {completedCount} of {teacherClasses.length} Completed Today
@@ -329,9 +329,9 @@ export const TeacherDashboard = () => {
                 padding: '0.35rem 0.85rem',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                color: '#4F46E5',
-                background: '#EEF2FF',
-                borderColor: '#C7D2FE',
+                color: 'var(--quantum-blue)',
+                background: 'var(--ice-glass)',
+                borderColor: 'rgba(36, 87, 255, 0.25)',
                 cursor: 'pointer',
               }}
               title="Reset and restart all class sessions for today"
@@ -453,8 +453,8 @@ export const TeacherDashboard = () => {
                         fontWeight: 700,
                         padding: '0.15rem 0.55rem',
                         borderRadius: 'var(--radius-sm)',
-                        background: '#EEF2FF',
-                        color: '#4F46E5',
+                        background: 'var(--ice-glass)',
+                        color: 'var(--quantum-blue)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.03em',
                       }}
@@ -538,7 +538,7 @@ export const TeacherDashboard = () => {
                       borderRadius: 'var(--radius-sm)',
                       fontSize: '0.74rem',
                       fontWeight: 700,
-                      background: '#2563EB',
+                      background: 'var(--quantum-blue)',
                       color: '#FFFFFF',
                       border: 'none',
                       cursor: 'pointer',
@@ -568,9 +568,9 @@ export const TeacherDashboard = () => {
                       borderRadius: 'var(--radius-sm)',
                       fontSize: '0.74rem',
                       fontWeight: 700,
-                      background: isSelected ? '#EEF2FF' : '#FFFFFF',
-                      color: '#4F46E5',
-                      border: '1px solid #C7D2FE',
+                      background: isSelected ? 'var(--ice-glass)' : '#FFFFFF',
+                      color: 'var(--quantum-blue)',
+                      border: '1px solid rgba(36, 87, 255, 0.25)',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -652,8 +652,8 @@ export const TeacherDashboard = () => {
                     fontWeight: 700,
                     padding: '0.2rem 0.6rem',
                     borderRadius: 'var(--radius-full)',
-                    background: '#EEF2FF',
-                    color: '#4F46E5',
+                    background: 'var(--ice-glass)',
+                    color: 'var(--quantum-blue)',
                   }}
                 >
                   Active Session: Class {activeClass.order || 1} of {teacherClasses.length}
@@ -1063,8 +1063,8 @@ export const TeacherDashboard = () => {
                                 width: 28,
                                 height: 28,
                                 borderRadius: '50%',
-                                background: isPresent ? '#DCFCE7' : isAbsent ? '#FEE2E2' : '#EEF2FF',
-                                color: isPresent ? '#059669' : isAbsent ? '#DC2626' : '#4F46E5',
+                                background: isPresent ? '#DCFCE7' : isAbsent ? '#FEE2E2' : 'var(--ice-glass)',
+                                color: isPresent ? '#059669' : isAbsent ? '#DC2626' : 'var(--quantum-blue)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -1208,7 +1208,7 @@ export const TeacherDashboard = () => {
       >
         <div className="glass-panel" style={{ padding: '1.25rem' }}>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Total Enrolled Students</div>
-          <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#4F46E5', marginTop: '0.2rem' }}>
+          <div style={{ fontSize: '1.7rem', fontWeight: 800, color: 'var(--quantum-blue)', marginTop: '0.2rem' }}>
             {studentRegisterRows.length} Students
           </div>
           <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 600 }}>
@@ -1583,9 +1583,9 @@ export const TeacherDashboard = () => {
                             width: 30,
                             height: 30,
                             borderRadius: '50%',
-                            background: isRed ? '#FEE2E2' : '#EEF2FF',
-                            color: isRed ? '#DC2626' : '#4F46E5',
-                            border: isRed ? '1px solid #FECACA' : '1px solid #C7D2FE',
+                            background: isRed ? '#FEE2E2' : 'var(--ice-glass)',
+                            color: isRed ? '#DC2626' : 'var(--quantum-blue)',
+                            border: isRed ? '1px solid #FECACA' : '1px solid rgba(36, 87, 255, 0.25)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -1803,7 +1803,7 @@ export const TeacherDashboard = () => {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <MessageSquare size={18} style={{ color: '#2563EB' }} />
+                <MessageSquare size={18} style={{ color: 'var(--quantum-blue)' }} />
                 <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
                   Send Low Attendance Notice
                 </h3>
@@ -1863,11 +1863,11 @@ export const TeacherDashboard = () => {
                       textAlign: 'left',
                       padding: '0.45rem 0.65rem',
                       fontSize: '0.76rem',
-                      background: noticeModal.message === tmpl ? '#EFF6FF' : '#FFFFFF',
-                      border: noticeModal.message === tmpl ? '1px solid #2563EB' : '1px solid var(--border-subtle)',
+                      background: noticeModal.message === tmpl ? 'var(--ice-glass)' : '#FFFFFF',
+                      border: noticeModal.message === tmpl ? '1px solid var(--quantum-blue)' : '1px solid var(--border-subtle)',
                       borderRadius: '6px',
                       cursor: 'pointer',
-                      color: noticeModal.message === tmpl ? '#1E40AF' : 'var(--text-main)',
+                      color: noticeModal.message === tmpl ? 'var(--quantum-blue)' : 'var(--text-main)',
                       lineHeight: 1.3,
                     }}
                   >

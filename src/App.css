@@ -1,4 +1,4 @@
-/* App.css - Layout, Components, and Interactions (Indigo + Soft White) */
+/* App.css - Quantum Blue (#2457FF) + Ice Glass (#DFF7FF) Theme */
 
 .app-container {
   min-height: 100vh;
@@ -7,17 +7,17 @@
   background-color: var(--bg-main);
 }
 
-/* NAVBAR */
+/* NAVBAR with Ice Glass Frosted Backdrop */
 .navbar {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(223, 247, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(36, 87, 255, 0.18);
   padding: 0.85rem 1.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 16px rgba(36, 87, 255, 0.06);
 }
 
 .navbar-inner {
@@ -39,13 +39,13 @@
 .brand-logo-icon {
   width: 42px;
   height: 42px;
-  background: linear-gradient(135deg, #4F46E5, #818CF8);
+  background: linear-gradient(135deg, #2457FF 0%, #5C88FF 100%);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 4px 16px rgba(36, 87, 255, 0.35);
 }
 
 .brand-title {
@@ -62,9 +62,9 @@
   font-size: 0.65rem;
   font-weight: 700;
   padding: 0.15rem 0.5rem;
-  background: rgba(79, 70, 229, 0.08);
-  border: 1px solid rgba(129, 140, 248, 0.4);
-  color: #4F46E5;
+  background: #DFF7FF;
+  border: 1px solid rgba(36, 87, 255, 0.3);
+  color: #2457FF;
   border-radius: var(--radius-full);
   text-transform: uppercase;
 }
@@ -78,8 +78,8 @@
 /* Role Switcher Pill */
 .role-switcher-pill {
   display: flex;
-  background: #F3F4F6;
-  border: 1px solid var(--border-subtle);
+  background: #DFF7FF;
+  border: 1px solid rgba(36, 87, 255, 0.22);
   border-radius: var(--radius-full);
   padding: 4px;
   position: relative;
@@ -103,9 +103,9 @@
 }
 
 .role-btn.active {
-  background: #4F46E5;
+  background: #2457FF;
   color: #fff;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 2px 10px rgba(36, 87, 255, 0.35);
 }
 
 .user-profile-badge {
@@ -113,10 +113,10 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.35rem 0.85rem;
-  background: #FFFFFF;
-  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(36, 87, 255, 0.18);
   border-radius: var(--radius-full);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgba(36, 87, 255, 0.06);
 }
 
 .user-avatar {
@@ -180,24 +180,25 @@
   gap: 0.75rem;
 }
 
+/* BUTTONS: Quantum Blue & Ice Glass */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: #4F46E5;
+  background: #2457FF;
   color: #fff;
   padding: 0.65rem 1.35rem;
   border-radius: var(--radius-md);
   font-weight: 600;
   font-size: 0.9rem;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 4px 14px rgba(36, 87, 255, 0.35);
   transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
-  background: #4338CA;
+  background: #1A44CC;
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
+  box-shadow: 0 6px 20px rgba(36, 87, 255, 0.45);
 }
 
 .btn-secondary {
@@ -205,7 +206,7 @@
   align-items: center;
   gap: 0.5rem;
   background: #FFFFFF;
-  border: 1px solid var(--border-light);
+  border: 1px solid rgba(36, 87, 255, 0.25);
   color: var(--text-main);
   padding: 0.65rem 1.2rem;
   border-radius: var(--radius-md);
@@ -216,8 +217,8 @@
 }
 
 .btn-secondary:hover {
-  background: #F3F4F6;
-  border-color: var(--border-light);
+  background: #DFF7FF;
+  border-color: #2457FF;
 }
 
 /* STUDENT DASHBOARD GRID */
@@ -254,7 +255,7 @@
   color: var(--text-muted);
 }
 
-/* CLASS CARDS */
+/* CLASS CARDS: Ice Glass + Quantum Blue */
 .class-list {
   display: flex;
   flex-direction: column;
@@ -262,8 +263,8 @@
 }
 
 .class-card {
-  background: #FFFFFF;
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(223, 247, 255, 0.55) 100%);
+  border: 1px solid rgba(36, 87, 255, 0.16);
   border-radius: var(--radius-lg);
   padding: 1.35rem 1.5rem;
   display: flex;
@@ -273,12 +274,12 @@
   position: relative;
   overflow: hidden;
   transition: all 0.25s ease;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 16px rgba(36, 87, 255, 0.05);
 }
 
 .class-card:hover {
-  border-color: var(--border-accent);
-  box-shadow: var(--shadow-md);
+  border-color: #2457FF;
+  box-shadow: 0 8px 24px rgba(36, 87, 255, 0.14);
 }
 
 .class-card::before {
@@ -288,14 +289,14 @@
   top: 0;
   bottom: 0;
   width: 5px;
-  background: var(--class-color, #4F46E5);
+  background: var(--class-color, #2457FF);
   border-radius: 4px 0 0 4px;
 }
 
 .class-card.is-live {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.04), #FFFFFF);
-  border-color: var(--border-accent);
-  box-shadow: 0 4px 18px rgba(79, 70, 229, 0.1);
+  background: linear-gradient(135deg, rgba(223, 247, 255, 0.85) 0%, #FFFFFF 100%);
+  border-color: #2457FF;
+  box-shadow: 0 6px 24px rgba(36, 87, 255, 0.18);
 }
 
 .class-main-info {
@@ -315,9 +316,9 @@
   font-weight: 700;
   padding: 0.2rem 0.55rem;
   border-radius: var(--radius-sm);
-  background: #EEF2FF;
-  border: 1px solid rgba(129, 140, 248, 0.3);
-  color: #4F46E5;
+  background: #DFF7FF;
+  border: 1px solid rgba(36, 87, 255, 0.3);
+  color: #2457FF;
   letter-spacing: 0.03em;
 }
 
@@ -362,9 +363,9 @@
 }
 
 .status-pill.upcoming {
-  background: #FEF3C7;
-  border: 1px solid #FCD34D;
-  color: #D97706;
+  background: #DFF7FF;
+  border: 1px solid rgba(36, 87, 255, 0.35);
+  color: #2457FF;
 }
 
 .status-pill.present {
@@ -381,14 +382,14 @@
 
 /* ATTENDANCE PERCENTAGE WIDGET */
 .attendance-overview-card {
-  background: #FFFFFF;
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(223, 247, 255, 0.6) 100%);
+  border: 1px solid rgba(36, 87, 255, 0.2);
   border-radius: var(--radius-lg);
   padding: 1.75rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 24px rgba(36, 87, 255, 0.07);
 }
 
 .gauge-container {
@@ -408,7 +409,7 @@
 
 .gauge-bg-circle {
   fill: none;
-  stroke: #E5E7EB;
+  stroke: #DFF7FF;
   stroke-width: 14;
 }
 
@@ -472,8 +473,8 @@
 }
 
 .mini-stat-card {
-  background: #F9FAFB;
-  border: 1px solid var(--border-subtle);
+  background: #DFF7FF;
+  border: 1px solid rgba(36, 87, 255, 0.2);
   border-radius: var(--radius-md);
   padding: 0.85rem 1rem;
   text-align: center;
@@ -483,7 +484,7 @@
   font-size: 1.35rem;
   font-weight: 700;
   font-family: var(--font-heading);
-  color: var(--text-main);
+  color: #2457FF;
 }
 
 .mini-stat-label {
@@ -531,7 +532,7 @@
 .progress-track {
   width: 100%;
   height: 7px;
-  background: #E5E7EB;
+  background: #DFF7FF;
   border-radius: 4px;
   overflow: hidden;
 }
@@ -542,11 +543,11 @@
   transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* SCAN QR PROMO / HERO CARD */
+/* SCAN QR PROMO / HERO CARD: Ice Glass + Quantum Blue */
 .scan-hero-card {
   padding: 1.5rem;
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(129, 140, 248, 0.06), #FFFFFF);
-  border: 1px solid rgba(129, 140, 248, 0.35);
+  background: linear-gradient(135deg, rgba(223, 247, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+  border: 2px solid rgba(36, 87, 255, 0.28);
   border-radius: var(--radius-lg);
   position: relative;
   overflow: hidden;
@@ -556,7 +557,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 1.25rem;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 10px 30px rgba(36, 87, 255, 0.12);
 }
 
 .scan-hero-text h3 {
@@ -576,9 +577,9 @@
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(17, 24, 39, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(12, 30, 60, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -587,11 +588,11 @@
 
 .modal-content {
   background: #FFFFFF;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid rgba(36, 87, 255, 0.22);
   border-radius: var(--radius-xl);
   width: 100%;
   max-width: 580px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 20px 40px rgba(36, 87, 255, 0.18);
   overflow: hidden;
   position: relative;
   color: var(--text-main);
@@ -603,7 +604,8 @@
 
 .modal-header {
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--border-subtle);
+  background: #DFF7FF;
+  border-bottom: 1px solid rgba(36, 87, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -618,8 +620,8 @@
 }
 
 .modal-close-btn {
-  background: #F3F4F6;
-  border: none;
+  background: #FFFFFF;
+  border: 1px solid rgba(36, 87, 255, 0.2);
   color: var(--text-muted);
   width: 32px;
   height: 32px;
@@ -631,8 +633,8 @@
 }
 
 .modal-close-btn:hover {
-  background: #E5E7EB;
-  color: var(--text-main);
+  background: #2457FF;
+  color: #FFFFFF;
 }
 
 .modal-body {
@@ -677,7 +679,7 @@
   width: 220px;
   height: 220px;
   position: relative;
-  border: 2px dashed rgba(79, 70, 229, 0.7);
+  border: 2px dashed rgba(36, 87, 255, 0.8);
   border-radius: 12px;
 }
 
@@ -685,7 +687,7 @@
   position: absolute;
   width: 22px;
   height: 22px;
-  border-color: #4F46E5;
+  border-color: #2457FF;
   border-style: solid;
 }
 
@@ -699,8 +701,8 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, transparent, #818CF8, #4F46E5, #818CF8, transparent);
-  box-shadow: 0 0 14px #818CF8, 0 0 24px #4F46E5;
+  background: linear-gradient(90deg, transparent, #8FB5FF, #2457FF, #8FB5FF, transparent);
+  box-shadow: 0 0 16px #2457FF, 0 0 28px rgba(36, 87, 255, 0.6);
   animation: scanLaser 2.2s infinite ease-in-out;
 }
 
@@ -721,8 +723,8 @@
 }
 
 .teacher-card {
-  background: #FFFFFF;
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(135deg, #FFFFFF 0%, rgba(223, 247, 255, 0.45) 100%);
+  border: 1px solid rgba(36, 87, 255, 0.18);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   display: flex;
@@ -735,8 +737,8 @@
 
 .teacher-card:hover {
   transform: translateY(-2px);
-  border-color: var(--border-accent);
-  box-shadow: var(--shadow-md);
+  border-color: #2457FF;
+  box-shadow: 0 8px 24px rgba(36, 87, 255, 0.14);
 }
 
 .teacher-card-top {
@@ -750,8 +752,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 0.95rem;
-  background: #F9FAFB;
-  border: 1px solid var(--border-subtle);
+  background: #DFF7FF;
+  border: 1px solid rgba(36, 87, 255, 0.22);
   border-radius: var(--radius-md);
   font-size: 0.85rem;
   color: var(--text-main);
@@ -778,8 +780,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(36, 87, 255, 0.18);
+  box-shadow: 0 8px 24px rgba(36, 87, 255, 0.1);
 }
 
 .qr-code-wrapper {
@@ -803,18 +805,19 @@
   justify-content: space-between;
   margin-top: 0.75rem;
   padding: 0.5rem 0.85rem;
-  background: #EEF2FF;
-  border: 1px solid #C7D2FE;
+  background: #DFF7FF;
+  border: 1px solid rgba(36, 87, 255, 0.3);
   border-radius: var(--radius-md);
   font-size: 0.78rem;
-  color: #4338CA;
+  color: #2457FF;
+  font-weight: 700;
 }
 
 /* LIVE ROSTER TABLE */
 .roster-table-container {
   max-height: 380px;
   overflow-y: auto;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid rgba(36, 87, 255, 0.18);
   border-radius: var(--radius-md);
   background: #FFFFFF;
 }
@@ -827,24 +830,24 @@
 }
 
 .roster-table th {
-  background: #F9FAFB;
+  background: #DFF7FF;
   padding: 0.75rem 1rem;
-  color: var(--text-muted);
-  font-weight: 600;
+  color: #0C1E3C;
+  font-weight: 700;
   position: sticky;
   top: 0;
   z-index: 10;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(36, 87, 255, 0.2);
 }
 
 .roster-table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(36, 87, 255, 0.1);
   color: var(--text-main);
 }
 
 .roster-table tr:hover td {
-  background: #F9FAFB;
+  background: rgba(223, 247, 255, 0.35);
 }
 
 .roster-table tr.just-marked td {
@@ -864,7 +867,7 @@
 }
 
 .app-footer span {
-  color: var(--primary);
+  color: #2457FF;
   font-weight: 600;
 }
 

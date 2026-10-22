@@ -214,10 +214,10 @@ export const ClassQrPresentationModal = ({ isOpen, onClose, classId }) => {
                       gap: '0.35rem',
                       marginTop: '0.4rem',
                       padding: '0.2rem 0.65rem',
-                      background: '#EEF2FF',
-                      border: '1px solid #C7D2FE',
+                      background: 'var(--ice-glass)',
+                      border: '1px solid rgba(36, 87, 255, 0.25)',
                       borderRadius: 'var(--radius-full)',
-                      color: '#4F46E5',
+                      color: 'var(--quantum-blue)',
                       fontSize: '0.78rem',
                       fontWeight: 700,
                     }}

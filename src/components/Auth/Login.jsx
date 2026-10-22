@@ -73,7 +73,7 @@ export const Login = () => {
           }}
         >
           <span style={{ color: '#0F172A' }}>Uni</span>
-          <span style={{ color: '#2563EB' }}>Track</span>
+          <span style={{ color: '#2457FF' }}>Track</span>
         </h1>
         <div style={{ fontSize: '0.92rem', color: '#64748B', fontWeight: 500 }}>
           Smart Attendance System
@@ -188,8 +188,8 @@ export const Login = () => {
                     transition: 'all 0.2s ease',
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#2563EB';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.2)';
+                    e.target.style.borderColor = '#2457FF';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(36, 87, 255, 0.2)';
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = '#CBD5E1';
@@ -234,8 +234,8 @@ export const Login = () => {
                     transition: 'all 0.2s ease',
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#2563EB';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.2)';
+                    e.target.style.borderColor = '#2457FF';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(36, 87, 255, 0.2)';
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = '#CBD5E1';
@@ -269,7 +269,7 @@ export const Login = () => {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  style={{ accentColor: '#2563EB' }}
+                  style={{ accentColor: '#2457FF' }}
                 />
                 Remember this device
               </label>
@@ -289,7 +289,7 @@ export const Login = () => {
                 fontSize: '0.95rem',
                 fontWeight: 600,
                 marginTop: '0.5rem',
-                background: '#2563EB',
+                background: '#2457FF',
                 color: '#FFFFFF',
                 borderRadius: '8px',
                 border: 'none',
@@ -297,7 +297,7 @@ export const Login = () => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                boxShadow: '0 4px 12px rgba(36, 87, 255, 0.3)',
               }}
             >
               Sign In to Portal
@@ -309,15 +309,16 @@ export const Login = () => {
         {/* Demo Credentials Documentation Panel */}
         <div
           style={{
-            background: '#FFFFFF',
-            border: '1px solid #E2E8F0',
+            background: 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(36, 87, 255, 0.2)',
             borderRadius: '16px',
             padding: '1.5rem',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0 8px 24px rgba(36, 87, 255, 0.08)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
-            <Sparkles size={16} style={{ color: '#2563EB' }} />
+            <Sparkles size={16} style={{ color: '#2457FF' }} />
             <h3 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F172A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Demo Accounts & Quick Auto-Fill
             </h3>
@@ -329,7 +330,7 @@ export const Login = () => {
           {/* Students Demo */}
           <div style={{ marginBottom: '1.15rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', fontWeight: 700, color: '#1E293B', marginBottom: '0.5rem' }}>
-              <GraduationCap size={15} style={{ color: '#2563EB' }} />
+              <GraduationCap size={15} style={{ color: '#2457FF' }} />
               <span>5 Student Accounts (Password: [name]123 or student123)</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.45rem' }}>
@@ -347,18 +348,18 @@ export const Login = () => {
                   style={{
                     padding: '0.45rem 0.6rem',
                     background: '#F8FAFC',
-                    border: '1px solid #E2E8F0',
+                    border: '1px solid rgba(36, 87, 255, 0.15)',
                     borderRadius: '8px',
                     textAlign: 'left',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#2563EB';
-                    e.currentTarget.style.background = '#EFF6FF';
+                    e.currentTarget.style.borderColor = '#2457FF';
+                    e.currentTarget.style.background = '#DFF7FF';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#E2E8F0';
+                    e.currentTarget.style.borderColor = 'rgba(36, 87, 255, 0.15)';
                     e.currentTarget.style.background = '#F8FAFC';
                   }}
                 >

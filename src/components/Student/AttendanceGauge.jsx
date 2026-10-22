@@ -150,7 +150,7 @@ export const AttendanceGauge = () => {
                     style={{
                       width: `${Math.min(100, Math.max(5, subjectPct))}%`,
                       background: subIsSafe
-                        ? 'linear-gradient(90deg, #4F46E5, #10b981)'
+                        ? 'linear-gradient(90deg, #2457FF, #10b981)'
                         : '#DC2626',
                     }}
                   />

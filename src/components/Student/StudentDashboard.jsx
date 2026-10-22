@@ -434,8 +434,8 @@ export const StudentDashboard = () => {
                   fontSize: '0.82rem',
                   color: 'var(--primary)',
                   fontWeight: 700,
-                  background: '#EEF2FF',
-                  border: '1px solid #C7D2FE',
+                  background: 'var(--ice-glass)',
+                  border: '1px solid rgba(36, 87, 255, 0.25)',
                   padding: '0.25rem 0.7rem',
                   borderRadius: 'var(--radius-sm)',
                 }}
@@ -480,7 +480,7 @@ export const StudentDashboard = () => {
                       background: isActive ? 'var(--primary)' : '#FFFFFF',
                       color: isActive ? '#FFFFFF' : 'var(--text-main)',
                       border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
-                      boxShadow: isActive ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
+                      boxShadow: isActive ? '0 2px 8px rgba(36, 87, 255, 0.25)' : 'none',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
                     }}
@@ -585,8 +585,8 @@ export const StudentDashboard = () => {
                             fontWeight: 700,
                             padding: '0.15rem 0.55rem',
                             borderRadius: 'var(--radius-sm)',
-                            background: '#EEF2FF',
-                            color: '#4F46E5',
+                            background: 'var(--ice-glass)',
+                            color: 'var(--quantum-blue)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.02em',
                           }}
@@ -645,15 +645,15 @@ export const StudentDashboard = () => {
                         <div
                           className="detail-item"
                           style={{
-                            background: '#EEF2FF',
+                            background: 'var(--ice-glass)',
                             padding: '0.2rem 0.55rem',
                             borderRadius: '4px',
-                            border: '1px solid #C7D2FE',
-                            color: '#4F46E5',
+                            border: '1px solid rgba(36, 87, 255, 0.22)',
+                            color: 'var(--quantum-blue)',
                             fontWeight: 700,
                           }}
                         >
-                          <Clock size={13} style={{ color: '#4F46E5' }} />
+                          <Clock size={13} style={{ color: 'var(--quantum-blue)' }} />
                           <span>{cls.time}</span>
                         </div>
                         <div className="detail-item">

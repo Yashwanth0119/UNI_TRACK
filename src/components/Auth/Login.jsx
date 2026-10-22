@@ -7,9 +7,6 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
-  GraduationCap,
-  Briefcase,
-  Sparkles,
 } from 'lucide-react';
 import { BrandLogo } from '../Common/BrandLogo';
 
@@ -37,12 +34,6 @@ export const Login = () => {
     if (!res.success) {
       setError(res.error || 'Invalid credentials. Please check your User ID and password.');
     }
-  };
-
-  const handleFillDemo = (id, pass) => {
-    setIdentifier(id);
-    setPassword(pass);
-    setError('');
   };
 
   return (
@@ -304,117 +295,6 @@ export const Login = () => {
               <ArrowRight size={17} />
             </button>
           </form>
-        </div>
-
-        {/* Demo Credentials Documentation Panel */}
-        <div
-          style={{
-            background: 'rgba(255, 255, 255, 0.92)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(36, 87, 255, 0.2)',
-            borderRadius: '16px',
-            padding: '1.5rem',
-            boxShadow: '0 8px 24px rgba(36, 87, 255, 0.08)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
-            <Sparkles size={16} style={{ color: '#2457FF' }} />
-            <h3 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F172A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Demo Accounts & Quick Auto-Fill
-            </h3>
-          </div>
-          <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '0 0 1rem 0', lineHeight: 1.4 }}>
-            Click any account below to instantly auto-fill credentials for testing:
-          </p>
-
-          {/* Students Demo */}
-          <div style={{ marginBottom: '1.15rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', fontWeight: 700, color: '#1E293B', marginBottom: '0.5rem' }}>
-              <GraduationCap size={15} style={{ color: '#2457FF' }} />
-              <span>5 Student Accounts (Password: [name]123 or student123)</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.45rem' }}>
-              {[
-                { name: 'Koshin', id: '21CS001', user: 'koshin', pass: 'koshin123', tag: 'DSA <75%' },
-                { name: 'Abijith', id: '21CS002', user: 'abijith', pass: 'abijith123', tag: 'Good' },
-                { name: 'Enoch John', id: '21CS003', user: 'enoch', pass: 'enoch123', tag: 'DSA/OS <75%' },
-                { name: 'Naresh', id: '21CS004', user: 'naresh', pass: 'naresh123', tag: 'DBMS <75%' },
-                { name: 'Thirush', id: '21CS005', user: 'thirush', pass: 'thirush123', tag: 'Good' },
-              ].map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => handleFillDemo(s.user, s.pass)}
-                  style={{
-                    padding: '0.45rem 0.6rem',
-                    background: '#F8FAFC',
-                    border: '1px solid rgba(36, 87, 255, 0.15)',
-                    borderRadius: '8px',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#2457FF';
-                    e.currentTarget.style.background = '#DFF7FF';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(36, 87, 255, 0.15)';
-                    e.currentTarget.style.background = '#F8FAFC';
-                  }}
-                >
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0F172A' }}>{s.name}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{s.id}</div>
-                  <div style={{ fontSize: '0.65rem', color: s.tag.includes('<75%') ? '#DC2626' : '#059669', fontWeight: 600, marginTop: '0.15rem' }}>
-                    {s.tag}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Teachers Demo */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', fontWeight: 700, color: '#1E293B', marginBottom: '0.5rem' }}>
-              <Briefcase size={15} style={{ color: '#059669' }} />
-              <span>2 Faculty Accounts (Password: [name]123 or teacher123)</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.45rem' }}>
-              {[
-                { name: 'Dr. Rajesh Sharma', role: 'Teacher 1 – DSA Faculty', id: 'FAC-001', user: 'rajesh', pass: 'rajesh123', subjects: 'DSA101' },
-                { name: 'Prof. Meera Nair', role: 'Teacher 2 – OS & Elective Faculty', id: 'FAC-002', user: 'meera', pass: 'meera123', subjects: 'OS102, DBMS103' },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => handleFillDemo(t.user, t.pass)}
-                  style={{
-                    padding: '0.5rem 0.65rem',
-                    background: '#F8FAFC',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '8px',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#059669';
-                    e.currentTarget.style.background = '#ECFDF5';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#E2E8F0';
-                    e.currentTarget.style.background = '#F8FAFC';
-                  }}
-                >
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0F172A' }}>{t.name}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>{t.role}</div>
-                  <div style={{ fontSize: '0.68rem', color: '#64748B', marginTop: '0.15rem' }}>
-                    ID: {t.id} • Subjects: {t.subjects}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>

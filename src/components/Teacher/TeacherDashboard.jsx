@@ -19,6 +19,7 @@ import {
   Power,
   Lock,
   ChevronRight,
+  RotateCcw,
 } from 'lucide-react';
 
 export const TeacherDashboard = () => {
@@ -29,6 +30,7 @@ export const TeacherDashboard = () => {
     selectTeacherClass,
     activateClassQr,
     completeClassSession,
+    restartTeacherClasses,
     teacherSubjectStudents,
     attendanceRecords,
     sendStudentReminder,
@@ -93,6 +95,15 @@ export const TeacherDashboard = () => {
       setToastMessage(`✓ All scheduled classes completed for today! Great job.`);
     }
     setTimeout(() => setToastMessage(''), 4500);
+  };
+
+  // Restart Classes Schedule (Reset all sessions back to Class 1 ready so staff can restart after completing all classes)
+  const handleRestartClasses = () => {
+    const res = restartTeacherClasses();
+    if (res?.message) {
+      setToastMessage(res.message);
+      setTimeout(() => setToastMessage(''), 4500);
+    }
   };
 
 
@@ -185,7 +196,7 @@ export const TeacherDashboard = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
             <span
               style={{
                 fontSize: '0.8rem',
@@ -199,8 +210,93 @@ export const TeacherDashboard = () => {
             >
               {completedCount} of {teacherClasses.length} Completed Today
             </span>
+
+            {/* Reset / Restart Classes Button */}
+            <button
+              onClick={handleRestartClasses}
+              className="btn-secondary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.35rem 0.85rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: '#4F46E5',
+                background: '#EEF2FF',
+                borderColor: '#C7D2FE',
+                cursor: 'pointer',
+              }}
+              title="Reset and restart all 4 class sessions for today"
+            >
+              <RotateCcw size={14} />
+              Reset & Restart Classes
+            </button>
           </div>
         </div>
+
+        {/* Banner shown when all 4 classes are completed */}
+        {completedCount === teacherClasses.length && (
+          <div
+            style={{
+              marginBottom: '1.25rem',
+              padding: '1.25rem 1.5rem',
+              background: 'linear-gradient(135deg, #ECFDF5, #F0FDF4)',
+              border: '2px solid #10B981',
+              borderRadius: 'var(--radius-lg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem',
+              boxShadow: '0 4px 16px rgba(16, 185, 129, 0.15)',
+              animation: 'popIn 0.3s ease',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background: '#10B981',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 0 14px rgba(16, 185, 129, 0.4)',
+                  flexShrink: 0,
+                }}
+              >
+                <CheckCircle2 size={24} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#065F46' }}>
+                  All 4 Class Sessions Completed! 🎉
+                </div>
+                <div style={{ fontSize: '0.84rem', color: '#047857', marginTop: '0.15rem' }}>
+                  You have successfully conducted and completed all scheduled classes for today. You can restart the schedule to launch a new class cycle.
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleRestartClasses}
+              className="btn-primary"
+              style={{
+                background: '#059669',
+                padding: '0.7rem 1.35rem',
+                fontSize: '0.9rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+              }}
+            >
+              <RotateCcw size={16} />
+              Restart Classes for New Cycle
+            </button>
+          </div>
+        )}
 
         {/* Classes Grid */}
         <div
@@ -467,22 +563,44 @@ export const TeacherDashboard = () => {
 
                 {/* If Completed */}
                 {isClassCompleted && (
-                  <div
-                    style={{
-                      padding: '0.65rem 1rem',
-                      background: '#ECFDF5',
-                      border: '1px solid #A7F3D0',
-                      borderRadius: 'var(--radius-md)',
-                      color: '#065F46',
-                      fontSize: '0.86rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      fontWeight: 600,
-                    }}
-                  >
-                    <CheckCircle2 size={18} />
-                    <span>Session Completed. Attendance has been logged. Next class is unlocked!</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <div
+                      style={{
+                        padding: '0.65rem 1rem',
+                        background: '#ECFDF5',
+                        border: '1px solid #A7F3D0',
+                        borderRadius: 'var(--radius-md)',
+                        color: '#065F46',
+                        fontSize: '0.86rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <CheckCircle2 size={18} />
+                      <span>Session Completed. Attendance has been logged. Next class is unlocked!</span>
+                    </div>
+
+                    <button
+                      onClick={handleRestartClasses}
+                      className="btn-secondary"
+                      style={{
+                        padding: '0.65rem 1.15rem',
+                        fontSize: '0.86rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.45rem',
+                        color: '#059669',
+                        borderColor: '#A7F3D0',
+                        background: '#ECFDF5',
+                        cursor: 'pointer',
+                      }}
+                      title="Reset and restart all 4 classes schedule"
+                    >
+                      <RotateCcw size={15} />
+                      Restart All Classes
+                    </button>
                   </div>
                 )}
               </div>

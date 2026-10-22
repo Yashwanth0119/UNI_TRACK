@@ -699,6 +699,80 @@ export const AttendanceProvider = ({ children }) => {
     };
   };
 
+  // Restart Teacher Classes: Resets all sessions for this teacher so staff can restart after completing all classes
+  const restartTeacherClasses = (teacherId) => {
+    const profId = teacherId || currentProfessor.id;
+    const profCode = currentProfessor.subjectCode;
+
+    // Find all classes for this teacher
+    const profClasses = classes
+      .filter((c) => {
+        const cProfId = (c.professorId || c.professor_id || '').toLowerCase();
+        const currProfId = (profId || '').toLowerCase();
+        const cCode = (c.code || '').toLowerCase();
+        const currSubCode = (profCode || '').toLowerCase();
+        return (cProfId && cProfId === currProfId) || (cCode && cCode === currSubCode);
+      })
+      .sort((a, b) => (a.order || a.order_num || 0) - (b.order || b.order_num || 0));
+
+    const profClassIds = new Set(profClasses.map((c) => c.id));
+
+    // Reset classes: session 1 becomes 'ready', subsequent sessions become 'locked'
+    const updatedClasses = classes.map((c) => {
+      if (profClassIds.has(c.id)) {
+        const order = c.order || c.order_num || 1;
+        return {
+          ...c,
+          status: order === 1 ? 'ready' : 'locked',
+        };
+      }
+      return c;
+    });
+
+    setClasses(updatedClasses);
+
+    // Set selected class to the first session
+    if (profClasses.length > 0) {
+      setSelectedClassId(profClasses[0].id);
+    }
+
+    // Clear today's attendance records for these restarted classes so students can scan again
+    const updatedRecords = attendanceRecords.filter((r) => !profClassIds.has(r.classId));
+    setAttendanceRecords(updatedRecords);
+
+    try {
+      const channel = new BroadcastChannel('attendpulse_sync');
+      channel.postMessage({
+        type: 'CLASS_STATUS_UPDATED',
+        classes: updatedClasses,
+        records: updatedRecords,
+      });
+      channel.close();
+    } catch (e) {}
+
+    // Sync to Supabase if configured
+    if (isSupabaseConfigured() && supabase) {
+      profClasses.forEach((cls) => {
+        const order = cls.order || cls.order_num || 1;
+        const newStatus = order === 1 ? 'ready' : 'locked';
+        supabase.from('classes').update({ status: newStatus }).eq('id', cls.id).then(() => {});
+      });
+    }
+
+    sounds.playSuccess();
+    confetti({
+      particleCount: 80,
+      spread: 70,
+      origin: { y: 0.5 },
+      colors: ['#4F46E5', '#10b981', '#38bdf8'],
+    });
+
+    return {
+      success: true,
+      message: 'Classes schedule has been reset & restarted! Session 1 is now ready to conduct.',
+    };
+  };
+
   // Set class status utility
   const setClassStatus = (classId, newStatus) => {
     if (newStatus === 'live') {
@@ -806,6 +880,13 @@ export const AttendanceProvider = ({ children }) => {
             method: 'QR_SCAN',
           },
           classInfo: cls,
+          prevSubAttended: currentAtt.attended,
+          newSubAttended: currentAtt.attended,
+          prevSubTotal: currentAtt.total,
+          newSubTotal: currentAtt.total,
+          prevTotalAttended: totalAttended,
+          newTotalAttended: totalAttended,
+          totalClassesCount,
           prevSubPct: currentSubPct,
           newSubPct: currentSubPct,
           prevOverallPct: overallPercentage,
@@ -938,6 +1019,13 @@ export const AttendanceProvider = ({ children }) => {
         message: `Attendance marked successfully for ${cls.name}!`,
         record: newRecord,
         classInfo: cls,
+        prevSubAttended,
+        newSubAttended,
+        prevSubTotal,
+        newSubTotal,
+        prevTotalAttended,
+        newTotalAttended,
+        totalClassesCount,
         prevSubPct,
         newSubPct,
         prevOverallPct,
@@ -1494,6 +1582,7 @@ export const AttendanceProvider = ({ children }) => {
         selectTeacherClass,
         activateClassQr,
         completeClassSession,
+        restartTeacherClasses,
         teacherSubjectStudents,
         sendStudentReminder,
         // Student Shortage Notification

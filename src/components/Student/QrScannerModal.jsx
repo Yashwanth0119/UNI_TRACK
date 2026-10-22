@@ -56,6 +56,13 @@ export const QrScannerModal = ({ isOpen, onClose }) => {
         message: result.message || 'Attendance verified & marked successfully!',
         classInfo: result.classInfo,
         record: result.record,
+        prevSubAttended: result.prevSubAttended,
+        newSubAttended: result.newSubAttended,
+        prevSubTotal: result.prevSubTotal,
+        newSubTotal: result.newSubTotal,
+        prevTotalAttended: result.prevTotalAttended,
+        newTotalAttended: result.newTotalAttended,
+        totalClassesCount: result.totalClassesCount,
         prevSubPct: result.prevSubPct,
         newSubPct: result.newSubPct,
         prevOverallPct: result.prevOverallPct,
@@ -303,40 +310,60 @@ export const QrScannerModal = ({ isOpen, onClose }) => {
                   }}
                 >
                   <TrendingUp size={15} style={{ color: '#059669' }} />
-                  Attendance Percentage Increased
+                  Attendance Increased Upon Verified QR Scan
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', textAlign: 'center' }}>
-                  <div style={{ background: '#FFFFFF', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid #D1FAE5' }}>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                      {scanStatus.classInfo?.code} Attendance
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.65rem', textAlign: 'center' }}>
+                  {/* Metric 1: No. of Classes Attended */}
+                  <div style={{ background: '#FFFFFF', padding: '0.75rem 0.5rem', borderRadius: 'var(--radius-md)', border: '1px solid #D1FAE5' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>
+                      Classes Attended
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-                      <span style={{ color: 'var(--text-dim)', fontSize: '0.86rem', textDecoration: 'line-through' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                      <span style={{ color: 'var(--text-dim)', fontSize: '0.84rem', textDecoration: 'line-through' }}>
+                        {scanStatus.prevSubAttended ?? '-'}
+                      </span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>
+                        ➔ {scanStatus.newSubAttended ?? '-'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', marginTop: '0.2rem' }}>
+                      +1 Class Attended
+                    </div>
+                  </div>
+
+                  {/* Metric 2: Subject Attendance Percentage */}
+                  <div style={{ background: '#FFFFFF', padding: '0.75rem 0.5rem', borderRadius: 'var(--radius-md)', border: '1px solid #D1FAE5' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>
+                      {scanStatus.classInfo?.code || 'Subject'} Attendance
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                      <span style={{ color: 'var(--text-dim)', fontSize: '0.84rem', textDecoration: 'line-through' }}>
                         {scanStatus.prevSubPct}%
                       </span>
-                      <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#059669' }}>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>
                         ➔ {scanStatus.newSubPct}%
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', marginTop: '0.2rem' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', marginTop: '0.2rem' }}>
                       +{(parseFloat(scanStatus.newSubPct || 0) - parseFloat(scanStatus.prevSubPct || 0)).toFixed(1)}% Increase
                     </div>
                   </div>
 
-                  <div style={{ background: '#FFFFFF', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid #D1FAE5' }}>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                  {/* Metric 3: Overall Attendance Percentage */}
+                  <div style={{ background: '#FFFFFF', padding: '0.75rem 0.5rem', borderRadius: 'var(--radius-md)', border: '1px solid #D1FAE5' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>
                       Overall Attendance
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-                      <span style={{ color: 'var(--text-dim)', fontSize: '0.86rem', textDecoration: 'line-through' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                      <span style={{ color: 'var(--text-dim)', fontSize: '0.84rem', textDecoration: 'line-through' }}>
                         {scanStatus.prevOverallPct}%
                       </span>
-                      <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#059669' }}>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>
                         ➔ {scanStatus.newOverallPct}%
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', marginTop: '0.2rem' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', marginTop: '0.2rem' }}>
                       +{(parseFloat(scanStatus.newOverallPct || 0) - parseFloat(scanStatus.prevOverallPct || 0)).toFixed(1)}% Increase
                     </div>
                   </div>
